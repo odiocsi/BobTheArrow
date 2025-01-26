@@ -39,6 +39,26 @@ async def leave(ctx):
         await ctx.send("Nem vagyok egy hangcsatornában sem!")
 
 @bot.command()
+async def play(ctx, *, query: str):
+    if ctx.voice_client is None:
+        if ctx.author.voice:
+            channel = ctx.author.voice.channel
+            await channel.connect()
+        else:
+            await ctx.send("Először lépj be egy hangcsatornába!")
+            return
+
+    search_results = mdown.search(query)
+    if not search_results['entries']:
+        await ctx.send("Nem található zene a megadott kereséssel.")
+        return
+
+    url = search_results['entries'][0]['url']
+    audio_file = mdown.download(url)
+    ctx.voice_client.stop()
+    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file))
+
+@bot.command()
 @commands.has_permissions(administrator=True)
 async def set_channel(ctx, channel: discord.TextChannel):
     global allowed_channel_id

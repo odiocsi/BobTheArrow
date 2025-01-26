@@ -25,7 +25,7 @@ class MusicDownloader:
         self.playlist = []
         self.results = []
 
-    def search_youtube(self, query, max_results=5):
+    def search(self, query, max_results=5):
         self.results = []
         with YoutubeDL(search_opts) as ydl:
             search_result = ydl.extract_info(f'ytsearch{max_results}:{query}', download=False)
