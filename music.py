@@ -32,7 +32,6 @@ class MusicDownloader:
         return search_result
     
     def download(self, url):
-        """Downloads a YouTube audio file and returns its file path."""
         with YoutubeDL(download_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info)  

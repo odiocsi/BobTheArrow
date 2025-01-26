@@ -41,7 +41,6 @@ async def leave(ctx):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def set_channel(ctx, channel: discord.TextChannel):
-    """Restricts bot activity to a specific channel."""
     global allowed_channel_id
     allowed_channel_id = channel.id 
     await ctx.send(f"A bot mostantól csak a következő csatornát látja: {channel.mention}")
@@ -49,7 +48,6 @@ async def set_channel(ctx, channel: discord.TextChannel):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def clear_channel(ctx):
-    """Clears channel restrictions."""
     global allowed_channel_id
     allowed_channel_id = None
     await ctx.send("A bot mostantól látja az összes csatornát.")
