@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 import music
+from discord.ui import Button, View
 
 ## Config
 
@@ -13,6 +14,7 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 allowed_channel_id = None
 
 mdown = music.MusicDownloader()
+playlist = []
 
 @bot.event
 async def on_ready():
@@ -38,6 +40,51 @@ async def leave(ctx):
     else:
         await ctx.send("Nem vagyok egy hangcsatornában sem!")
 
+class MusicView(View):
+    def __init__(self, ctx, message):
+        super().__init__()
+        self.ctx = ctx
+        self.message = message
+        self.isPaused = 0
+
+        self.plpa_button = Button(style=discord.ButtonStyle.primary, label="⏯️")
+        self.plpa_button.callback = self.plpa
+
+    async def plpa(self, interaction):
+        await interaction.response.defer()
+        if self.ctx.voice_client.is_playing():
+            self.ctx.voice_client.pause()
+            self.isPaused = 1
+        else:
+            self.ctx.voice_client.resume()
+            self.isPaused = 0
+        await self.edit_message()
+
+    async def add_buttons(self):
+        self.clear_items()
+        self.add_item(self.plpa_button)
+
+    async def edit_message(self):
+        new_message = ""
+        if not playlist:
+            new_message = "Jelenleg nem megy zene."
+        else:
+            if self.isPaused:
+                new_message = "⏸️ "
+            else:
+                new_message = "▶️ "
+
+            if len(playlist) > 1:
+                new_message += f"Jelenlegi zene: {playlist[0]['title']}"
+                for i in range(1, len(playlist)):
+                    new_message += f"\nKövetkező zene: {playlist[i]['title']}"
+            else:
+                new_message += f"Jelenlegi zene: {playlist[0]['title']} \n \n Nincsen következő zene"
+
+        await self.add_buttons()
+        await self.message.edit(content=new_message, view=self)
+
+
 @bot.command()
 async def play(ctx, *, query: str):
     if ctx.voice_client is None:
@@ -53,10 +100,17 @@ async def play(ctx, *, query: str):
         await ctx.send("Nem található zene a megadott kereséssel.")
         return
 
+    message = await ctx.send("Betöltés...")
+    view = MusicView(ctx, message)
+    await message.edit(view=view)
+
     url = search_results['entries'][0]['url']
     audio_file = mdown.download(url)
     ctx.voice_client.stop()
     ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file))
+
+    playlist.append({'title': search_results['entries'][0]['title']})
+    await view.edit_message()
 
 @bot.command()
 @commands.has_permissions(administrator=True)
