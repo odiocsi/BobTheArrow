@@ -67,12 +67,12 @@ class MusicView(View):
     async def edit_message(self):
         new_message = ""
         if not playlist:
-            new_message = "Jelenleg nem megy zene."
+            new_message = "Státusz: Jelenleg nem megy zene."
         else:
             if self.isPaused:
-                new_message = "⏸️ "
+                new_message = "Státusz: ⏸️\n\n"
             else:
-                new_message = "▶️ "
+                new_message = "Státusz: ▶️\n\n"
 
             if len(playlist) > 1:
                 new_message += f"Jelenlegi zene: {playlist[0]['title']}"
