@@ -37,6 +37,7 @@ class MusicDownloader:
 class Playlist:
     def __init__(self):
         self.__playlist = []
+        self.__index = 0
         self.__isloop = False
         self.__isloop1 = False
         self.current = []
@@ -52,19 +53,19 @@ class Playlist:
             self.__playlist.pop(i)
 
     def loop(self):
-        self.__isloop1 = False
-        self.__isloop = not self.__isloop
+        if not self.__isloop and not self.__isloop1:
+            self.__isloop = True
+            return "🔁"
+        if self.__isloop: 
+            self.__isloop = False
+            self.__isloop1 = True
+            return "🔄"
+        if self.__isloop1:
+            self.__isloop1 = False
+            return ""
 
-    def loop1(self):
-        self.__isloop = False
-        self.__isloop1 = not self.__isloop1
-
-    def getLoop(self):
-        if (self.__isloop):
-            return 1
-        if (self.__isloop1):
-            return 2
-        return 0
+    def isEmpty(self):  
+        return not self.__playlist
 
     def shuffle(self):
         import random
@@ -72,16 +73,50 @@ class Playlist:
 
     def next(self):
         if self.__playlist:
-            self.current = self.__playlist.pop(0)
             if self.__isloop:
-                self.__playlist.append(self.current)
-            if self.__isloop1:
-                self.__playlist.insert(0, self.current)
-                
+                if not (self.current in self.__playlist):
+                    self.__playlist.insert(0, self.current)
+                if self.__index == len(self.__playlist) - 1:
+                    self.__index = 0
+                else:
+                    self.__index += 1
+                self.current = self.__playlist[self.__index]
+            elif self.__isloop1:
+                if not (self.current in self.__playlist):
+                    self.__playlist.insert(0, self.current)
+                else:
+                    self.__playlist.remove(self.current)
+                    self.__playlist.insert(0, self.current)
+                self.__index = 0
+                self.current = self.__playlist[0]
+            else: 
+                self.__index = 0
+                self.current = self.__playlist.pop(0)
+
             return self.current
-        return None
 
     def tostring(self):
-        for i, song in enumerate(self.__playlist, start=1):
-            print(f"{i}. {song['title']}")
-
+        if self.__playlist:
+            string = ""
+            if (self.__index == 0):
+                i = 0
+                counter = 1
+                while i < len(self.__playlist):
+                    string += f"{counter}. {self.__playlist[i]['title']}\n"
+                    i += 1
+                    counter += 1 
+            else:
+                i = self.__index +1
+                counter = 1
+                while i < len(self.__playlist):
+                    string += f"{counter}. {self.__playlist[i]['title']}\n"
+                    i += 1 
+                    counter += 1
+                i = 0
+                while i <= self.__index:
+                    string += f"{counter}. {self.__playlist[i]['title']}\n"
+                    i += 1
+                    counter += 1
+            return string
+        else:
+            return  "A lejátszasi lista üres"

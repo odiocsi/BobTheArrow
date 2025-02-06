@@ -13,8 +13,81 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 allowed_channel_id = None
 
 mdown = music.MusicDownloader()
-playlist = []
+mplay = music.Playlist()
+view = None
+message = None
 
+class MusicView(View):
+    def __init__(self, ctx, message, pl):
+        super().__init__(timeout=None)
+        self.__ctx = ctx
+        self.__message = message
+        self.__isPaused = False
+        self.__mplay = pl
+        self.__loopstatus = ""
+
+        self.__plpa_button = Button(style=discord.ButtonStyle.primary, label="⏯️")
+        self.__plpa_button.callback = self.__plpa
+        self.__shuff_button = Button(style=discord.ButtonStyle.primary, label="🔀")
+        self.__shuff_button.callback = self.__shuffle
+        self.__skip_button = Button(style=discord.ButtonStyle.primary, label="⏩")
+        self.__skip_button.callback = self.__skip
+        self.__loop_button = Button(style=discord.ButtonStyle.primary, label="🔁")
+        self.__loop_button.callback = self.__loop
+
+        self.__add_buttons()
+
+    async def __plpa(self, interaction):
+        await interaction.response.defer()
+        if self.__ctx.voice_client.is_playing():
+            self.__ctx.voice_client.pause()
+        else:
+            self.__ctx.voice_client.resume()
+        self.__isPaused = not self.__isPaused
+        await self.edit_message()
+
+    async def __skip(self, interaction):
+        await interaction.response.defer()
+        if self.__ctx and self.__ctx.voice_client.is_playing():
+            self.__ctx.voice_client.stop()
+            await play_next(self.__ctx, self)
+
+    async def __shuffle(self, interaction):
+        await interaction.response.defer()
+        self.__mplay.shuffle()
+        await self.edit_message()
+
+    async def __loop(self, interaction):
+        await interaction.response.defer()
+        self.__loopstatus = self.__mplay.loop()
+        await self.edit_message()
+
+    def __add_buttons(self):
+        self.clear_items()
+        self.add_item(self.__plpa_button)
+        if not self.__mplay.isEmpty():
+            self.add_item(self.__shuff_button)
+            self.add_item(self.__skip_button)
+        self.add_item(self.__loop_button)
+
+    async def edit_message(self):
+        new_message = ""
+        if self.__mplay.isEmpty() and not self.__ctx.voice_client.is_playing() and not self.__isPaused:
+            new_message = "Státusz: Jelenleg nem megy zene."
+        else:
+            if self.__isPaused:
+                new_message = f"Státusz: ⏸️{self.__loopstatus}\n\n"
+            else:
+                new_message = f"Státusz: ▶️{self.__loopstatus}\n\n"
+
+            if self.__mplay.current:
+                new_message += f"Jelenlegi zene: {self.__mplay.current['title']}"
+            else:
+                new_message += "Jelenlegi zene: Nincs"
+            new_message += f"\n\n "+self.__mplay.tostring()
+
+        self.__add_buttons()
+        await self.__message.edit(content=new_message, view=self)
 @bot.event
 async def on_ready():
     print('A bot elindult.')
@@ -39,53 +112,9 @@ async def leave(ctx):
     else:
         await ctx.send("Nem vagyok egy hangcsatornában sem!")
 
-class MusicView(View):
-    def __init__(self, ctx, message):
-        super().__init__()
-        self.ctx = ctx
-        self.message = message
-        self.isPaused = 0
-
-        self.plpa_button = Button(style=discord.ButtonStyle.primary, label="⏯️")
-        self.plpa_button.callback = self.plpa
-
-    async def plpa(self, interaction):
-        await interaction.response.defer()
-        if self.ctx.voice_client.is_playing():
-            self.ctx.voice_client.pause()
-            self.isPaused = 1
-        else:
-            self.ctx.voice_client.resume()
-            self.isPaused = 0
-        await self.edit_message()
-
-    async def add_buttons(self):
-        self.clear_items()
-        self.add_item(self.plpa_button)
-
-    async def edit_message(self):
-        new_message = ""
-        if not playlist:
-            new_message = "Státusz: Jelenleg nem megy zene."
-        else:
-            if self.isPaused:
-                new_message = "Státusz: ⏸️\n\n"
-            else:
-                new_message = "Státusz: ▶️\n\n"
-
-            if len(playlist) > 1:
-                new_message += f"Jelenlegi zene: {playlist[0]['title']}"
-                for i in range(1, len(playlist)):
-                    new_message += f"\nKövetkező zene: {playlist[i]['title']}"
-            else:
-                new_message += f"Jelenlegi zene: {playlist[0]['title']} \n \n Nincsen következő zene"
-
-        await self.add_buttons()
-        await self.message.edit(content=new_message, view=self)
-
-
 @bot.command()
 async def play(ctx, *, query: str):
+    global view, message
     if ctx.voice_client is None:
         if ctx.author.voice:
             channel = ctx.author.voice.channel
@@ -99,17 +128,32 @@ async def play(ctx, *, query: str):
         await ctx.send("Nem található zene a megadott kereséssel.")
         return
 
-    message = await ctx.send("Betöltés...")
-    view = MusicView(ctx, message)
-    await message.edit(view=view)
+    if view is None:
+        message = await ctx.send("Betöltés...")
+        view = MusicView(ctx, message, mplay)
+        await message.edit(view=view)
 
-    url = search_results['entries'][0]['url']
+    mplay.add(search_results['entries'][0]['title'], search_results['entries'][0]['url'])
+    await view.edit_message()
+
+    if not ctx.voice_client.is_playing():
+       await play_next(ctx, view)
+
+async def play_next(ctx, view):
+    if mplay.isEmpty():
+        await view.edit_message()
+        return
+    mplay.next()
+
+    url = mplay.current['url']
     audio_file = mdown.download(url)
     ctx.voice_client.stop()
-    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file))
+    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next_wrapper(ctx, view))
 
-    playlist.append({'title': search_results['entries'][0]['title']})
     await view.edit_message()
+
+async def play_next_wrapper(ctx, view):
+    await play_next(ctx, view)
 
 @bot.command()
 @commands.has_permissions(administrator=True)
