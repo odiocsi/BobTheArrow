@@ -65,7 +65,7 @@ class Playlist:
         if (self.__isloop1):
             return 2
         return 0
-        
+
     def shuffle(self):
         import random
         random.shuffle(self.__playlist)
@@ -75,6 +75,9 @@ class Playlist:
             self.current = self.__playlist.pop(0)
             if self.__isloop:
                 self.__playlist.append(self.current)
+            if self.__isloop1:
+                self.__playlist.insert(0, self.current)
+                
             return self.current
         return None
 
