@@ -1,7 +1,6 @@
 from yt_dlp import YoutubeDL
 
 ## Config
-
 download_folder = "music"
 
 search_opts = {
@@ -19,10 +18,8 @@ download_opts = {
 }
 
 ## Downloader class
-
 class MusicDownloader:
     def __init__(self):
-        self.playlist = []
         self.results = []
 
     def search(self, query, max_results=5):
@@ -37,7 +34,51 @@ class MusicDownloader:
             file_path = ydl.prepare_filename(info)  
             return file_path  
 
+class Playlist:
+    def __init__(self):
+        self.__playlist = []
+        self.__isloop = False
+        self.__isloop1 = False
+        self.current = []
 
+    def add(self, title, url):
+        self.__playlist.append({'title': title, 'url': url})
+    
+    def clear(self):
+        self.__playlist = []
 
-#for id, entry in enumerate(search_result['entries'], start=1):
-#    print(f"{id}. {entry['title']} ({entry['url']})")
+    def remove(self, i):
+        if i < len(self.__playlist):
+            self.__playlist.pop(i)
+
+    def loop(self):
+        self.__isloop1 = False
+        self.__isloop = not self.__isloop
+
+    def loop1(self):
+        self.__isloop = False
+        self.__isloop1 = not self.__isloop1
+
+    def getLoop(self):
+        if (self.__isloop):
+            return 1
+        if (self.__isloop1):
+            return 2
+        return 0
+        
+    def shuffle(self):
+        import random
+        random.shuffle(self.__playlist)
+
+    def next(self):
+        if self.__playlist:
+            self.current = self.__playlist.pop(0)
+            if self.__isloop:
+                self.__playlist.append(self.current)
+            return self.current
+        return None
+
+    def tostring(self):
+        for i, song in enumerate(self.__playlist, start=1):
+            print(f"{i}. {song['title']}")
+

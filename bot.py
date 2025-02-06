@@ -6,7 +6,6 @@ import music
 from discord.ui import Button, View
 
 ## Config
-
 intents = discord.Intents.default()
 intents.messages = True 
 intents.message_content = True  
