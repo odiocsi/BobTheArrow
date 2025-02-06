@@ -54,9 +54,15 @@ class Playlist:
 
     def loop(self):
         if not self.__isloop and not self.__isloop1:
+            if not (self.current in self.__playlist):
+                self.__playlist.insert(0, self.current)
             self.__isloop = True
             return "🔁"
         if self.__isloop: 
+            if not (self.current in self.__playlist):
+                self.__playlist.insert(0, self.current)
+            else:
+                self.__playlist.remove(self.current)
             self.__isloop = False
             self.__isloop1 = True
             return "🔄"

@@ -1,4 +1,5 @@
 import os
+import time
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
@@ -44,23 +45,20 @@ class MusicView(View):
         else:
             self.__ctx.voice_client.resume()
         self.__isPaused = not self.__isPaused
-        await self.edit_message()
 
     async def __skip(self, interaction):
         await interaction.response.defer()
         if self.__ctx and self.__ctx.voice_client.is_playing():
             self.__ctx.voice_client.stop()
-            await play_next(self.__ctx, self)
+            play_next(self.__ctx, self)
 
     async def __shuffle(self, interaction):
         await interaction.response.defer()
         self.__mplay.shuffle()
-        await self.edit_message()
 
     async def __loop(self, interaction):
         await interaction.response.defer()
         self.__loopstatus = self.__mplay.loop()
-        await self.edit_message()
 
     def __add_buttons(self):
         self.clear_items()
@@ -134,26 +132,24 @@ async def play(ctx, *, query: str):
         await message.edit(view=view)
 
     mplay.add(search_results['entries'][0]['title'], search_results['entries'][0]['url'])
-    await view.edit_message()
 
     if not ctx.voice_client.is_playing():
-       await play_next(ctx, view)
+        play_next(ctx, view)
+        await loop()
 
-async def play_next(ctx, view):
+def play_next(ctx, view):
     if mplay.isEmpty():
-        await view.edit_message()
         return
     mplay.next()
-
     url = mplay.current['url']
     audio_file = mdown.download(url)
     ctx.voice_client.stop()
-    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next_wrapper(ctx, view))
+    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next(ctx, view))
 
-    await view.edit_message()
-
-async def play_next_wrapper(ctx, view):
-    await play_next(ctx, view)
+async def loop():
+    while True:
+        time.sleep(0.250)        
+        await view.edit_message()
 
 @bot.command()
 @commands.has_permissions(administrator=True)
