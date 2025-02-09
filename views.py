@@ -86,10 +86,7 @@ class ChoosingView(View):
         async def callback(interaction: discord.Interaction):
             self.__resp.answer = i
             await interaction.response.defer()
-            try: 
-                await self.__msg.delete() 
-            except:
-                print("Az üzenet törlése sikertelen.")
+            await self.__msg.delete() 
         return callback
 
     async def edit_message(self):

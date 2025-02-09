@@ -54,6 +54,17 @@ async def get_server_response(ctx):
         responses[ctx.guild.id] = Response()
     return responses[ctx.guild.id]
 
+async def delete_message(ctx = None, msg = None, mgs = None):
+    try: 
+        if ctx is not None:
+            await ctx.message.delete()
+            if mgs is not None:
+                await ctx.channel.delete_messages(mgs)
+        if msg is not None:
+            await msg.delete()
+    except:
+        print("Az üzenet törlése sikertelen.")
+
 @bot.event
 async def on_ready():
     print('A bot elindult.')
@@ -84,8 +95,7 @@ async def play(ctx, *, query: str):
     if response.choosing:
         msg = await ctx.send("Először válaszd ki a zenét!")
         await asyncio.sleep(2)
-        await msg.delete()
-        await ctx.message.delete()
+        await delete_message(ctx, msg)
         return
     
     if ctx.voice_client is None:
@@ -95,22 +105,18 @@ async def play(ctx, *, query: str):
             mgs = []
             async for msg in ctx.channel.history(limit=100):
                 mgs.append(msg)
-            try:
-                await ctx.channel.delete_messages(mgs)
-            except:
-                print("Az üzenetek törlése sikertelen.")
+            await delete_message(ctx, None, mgs)
         else:
             msg = await ctx.send("Először lépj be egy hangcsatornába!")
             await asyncio.sleep(2)
-            await msg.delete()
-            await ctx.message.delete()
+            await delete_message(ctx, msg)
             return
 
     search_results = mdown.search(query)
     if not search_results['entries']:
         await ctx.send("Nem található zene a megadott kereséssel.")
-        return
-
+        await asyncio.sleep(2)
+        await delete_message(ctx)
     playlist = await get_server_playlist(ctx)
 
     msg = await find_existing_message(ctx)
@@ -123,10 +129,7 @@ async def play(ctx, *, query: str):
     bot.loop.create_task(update_view(view))
 
     await asyncio.sleep(2)
-    try: 
-        await ctx.message.delete()
-    except:
-        print("Az üzenet törlése sikertelen.")
+    await delete_message(ctx)
 
     while response.answer == -1:
         await asyncio.sleep(0.1)
@@ -151,10 +154,6 @@ async def choose_song_msg(ctx, response, view, playlist, search_results):
     if not ctx.voice_client.is_playing():
         play_next(ctx, view, playlist)
     await asyncio.sleep(1)
-    try:
-        await msg.delete()
-    except:
-        print("Az üzenet törlése sikertelen.")
 
 
 def play_next(ctx, view, playlist):
@@ -180,12 +179,14 @@ async def clear(ctx, number=None):
     if number is None:
         number = 100
     number = int(number) 
+    counter = 0
     async for msg in ctx.channel.history(limit=number):
         mgs.append(msg)
-    await ctx.channel.delete_messages(mgs)
-    msg = await ctx.send(f"{number} üzenet törölve.")
+        counter += 1
+    await delete_message(ctx, None, mgs)
+    msg = await ctx.send(f"{counter} üzenet törölve.")
     await asyncio.sleep(5)
-    await msg.delete()
+    await delete_message(None, msg, None)
 
 @bot.command()
 @commands.has_permissions(administrator=True)
