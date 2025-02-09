@@ -1,4 +1,5 @@
 from yt_dlp import YoutubeDL
+import random
 
 ## Config
 download_folder = "music"
@@ -34,12 +35,13 @@ class MusicDownloader:
             file_path = ydl.prepare_filename(info)  
             return file_path  
 
+
+## Playlist class
 class Playlist:
     def __init__(self):
         self.__playlist = []
         self.__index = 0
-        self.__isloop = False
-        self.__isloop1 = False
+        self.__loop = "no"
         self.current = []
 
     def add(self, title, url):
@@ -53,48 +55,40 @@ class Playlist:
             self.__playlist.pop(i)
 
     def loop(self):
-        if not self.__isloop and not self.__isloop1:
+        if self.__loop == "no" and not self.isEmpty():
             if not (self.current in self.__playlist):
                 self.__playlist.insert(0, self.current)
-            self.__isloop = True
+            self.__loop = "whole"
             return "🔁"
-        if self.__isloop: 
-            if not (self.current in self.__playlist):
-                self.__playlist.insert(0, self.current)
-            else:
+        if self.__loop == "whole" or (self.isEmpty() and not self.__loop == "one"):
+            if (self.current in self.__playlist):
                 self.__playlist.remove(self.current)
-            self.__isloop = False
-            self.__isloop1 = True
+            self.__loop = "one"
             return "🔄"
-        if self.__isloop1:
-            self.__isloop1 = False
+        if self.__loop == "one":
+            self.__loop = "no"
             return ""
 
     def isEmpty(self):  
         return not self.__playlist
 
     def shuffle(self):
-        import random
         random.shuffle(self.__playlist)
 
     def next(self):
         if self.__playlist:
-            if self.__isloop:
+            if self.__loop == "whole":
                 if not (self.current in self.__playlist):
                     self.__playlist.insert(0, self.current)
-                if self.__index == len(self.__playlist) - 1:
+                if self.__index >= len(self.__playlist) - 1:
                     self.__index = 0
                 else:
                     self.__index += 1
                 self.current = self.__playlist[self.__index]
-            elif self.__isloop1:
-                if not (self.current in self.__playlist):
-                    self.__playlist.insert(0, self.current)
-                else:
+            elif self.__loop == "one":
+                if (self.current in self.__playlist):
                     self.__playlist.remove(self.current)
-                    self.__playlist.insert(0, self.current)
                 self.__index = 0
-                self.current = self.__playlist[0]
             else: 
                 self.__index = 0
                 self.current = self.__playlist.pop(0)
@@ -104,25 +98,17 @@ class Playlist:
     def tostring(self):
         if self.__playlist:
             string = ""
-            if (self.__index == 0):
-                i = 0
-                counter = 1
-                while i < len(self.__playlist):
-                    string += f"{counter}. {self.__playlist[i]['title']}\n"
-                    i += 1
-                    counter += 1 
+            if not self.__loop == "whole":
+                for i, item in enumerate(self.__playlist):
+                    string += f"{i}. {item['title']}\n"
             else:
-                i = self.__index +1
-                counter = 1
-                while i < len(self.__playlist):
-                    string += f"{counter}. {self.__playlist[i]['title']}\n"
-                    i += 1 
-                    counter += 1
-                i = 0
-                while i <= self.__index:
-                    string += f"{counter}. {self.__playlist[i]['title']}\n"
-                    i += 1
-                    counter += 1
+                list2 = self.__playlist[self.__index+1:]
+                for i, item in enumerate(list2):
+                    string += f"{i}. {item['title']}\n"
+                list1 = self.__playlist[:self.__index+1]
+                for i, item in enumerate(list1):
+                    string += f"{i}. {item['title']}\n"
             return string
         else:
             return  "A lejátszasi lista üres"
+

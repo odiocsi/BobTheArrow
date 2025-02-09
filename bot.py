@@ -1,91 +1,59 @@
 import os
 import time
+import asyncio
+
 from dotenv import load_dotenv
+
 import discord
 from discord.ext import commands
+
 import music
-from discord.ui import Button, View
+import views
 
 ## Config
 intents = discord.Intents.default()
 intents.messages = True 
 intents.message_content = True  
 bot = commands.Bot(command_prefix=".", intents=intents)
+ffmpeg_options = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'options': '-vn'
+}
+
+## Global variables
 allowed_channel_id = None
-
 mdown = music.MusicDownloader()
-mplay = music.Playlist()
-view = None
-message = None
+playlists = {}
+message_views = {}
+responses = {}
 
-class MusicView(View):
-    def __init__(self, ctx, message, pl):
-        super().__init__(timeout=None)
-        self.__ctx = ctx
-        self.__message = message
-        self.__isPaused = False
-        self.__mplay = pl
-        self.__loopstatus = ""
+## Util
+class Response():
+    def __init__(self):
+        self.answer = -1
+        self.choosing = False
 
-        self.__plpa_button = Button(style=discord.ButtonStyle.primary, label="⏯️")
-        self.__plpa_button.callback = self.__plpa
-        self.__shuff_button = Button(style=discord.ButtonStyle.primary, label="🔀")
-        self.__shuff_button.callback = self.__shuffle
-        self.__skip_button = Button(style=discord.ButtonStyle.primary, label="⏩")
-        self.__skip_button.callback = self.__skip
-        self.__loop_button = Button(style=discord.ButtonStyle.primary, label="🔁")
-        self.__loop_button.callback = self.__loop
+async def find_existing_message(channel):
+    async for msg in channel.history(limit=50):
+        if msg.author == channel.guild.me and msg.components:
+            return msg 
+    return None
 
-        self.__add_buttons()
+async def get_server_playlist(ctx):
+    if ctx.guild.id not in playlists:
+        playlists[ctx.guild.id] = music.Playlist() 
+    return playlists[ctx.guild.id]
 
-    async def __plpa(self, interaction):
-        await interaction.response.defer()
-        if self.__ctx.voice_client.is_playing():
-            self.__ctx.voice_client.pause()
-        else:
-            self.__ctx.voice_client.resume()
-        self.__isPaused = not self.__isPaused
+async def get_server_view(ctx, msg):
+    if ctx.guild.id not in message_views:
+        message_views[ctx.guild.id] = views.MusicView(ctx, msg, await get_server_playlist(ctx))
+    return message_views[ctx.guild.id]
 
-    async def __skip(self, interaction):
-        await interaction.response.defer()
-        if self.__ctx and self.__ctx.voice_client.is_playing():
-            self.__ctx.voice_client.stop()
-            play_next(self.__ctx, self)
+async def get_server_response(ctx):
+    if ctx.guild.id not in responses:
+        responses[ctx.guild.id] = Response()
+    return responses[ctx.guild.id]
 
-    async def __shuffle(self, interaction):
-        await interaction.response.defer()
-        self.__mplay.shuffle()
-
-    async def __loop(self, interaction):
-        await interaction.response.defer()
-        self.__loopstatus = self.__mplay.loop()
-
-    def __add_buttons(self):
-        self.clear_items()
-        self.add_item(self.__plpa_button)
-        if not self.__mplay.isEmpty():
-            self.add_item(self.__shuff_button)
-            self.add_item(self.__skip_button)
-        self.add_item(self.__loop_button)
-
-    async def edit_message(self):
-        new_message = ""
-        if self.__mplay.isEmpty() and not self.__ctx.voice_client.is_playing() and not self.__isPaused:
-            new_message = "Státusz: Jelenleg nem megy zene."
-        else:
-            if self.__isPaused:
-                new_message = f"Státusz: ⏸️{self.__loopstatus}\n\n"
-            else:
-                new_message = f"Státusz: ▶️{self.__loopstatus}\n\n"
-
-            if self.__mplay.current:
-                new_message += f"Jelenlegi zene: {self.__mplay.current['title']}"
-            else:
-                new_message += "Jelenlegi zene: Nincs"
-            new_message += f"\n\n "+self.__mplay.tostring()
-
-        self.__add_buttons()
-        await self.__message.edit(content=new_message, view=self)
 @bot.event
 async def on_ready():
     print('A bot elindult.')
@@ -112,13 +80,30 @@ async def leave(ctx):
 
 @bot.command()
 async def play(ctx, *, query: str):
-    global view, message
+    response = await get_server_response(ctx) 
+    if response.choosing:
+        msg = await ctx.send("Először válaszd ki a zenét!")
+        await asyncio.sleep(2)
+        await msg.delete()
+        await ctx.message.delete()
+        return
+    
     if ctx.voice_client is None:
         if ctx.author.voice:
             channel = ctx.author.voice.channel
             await channel.connect()
+            mgs = []
+            async for msg in ctx.channel.history(limit=100):
+                mgs.append(msg)
+            try:
+                await ctx.channel.delete_messages(mgs)
+            except:
+                print("Az üzenetek törlése sikertelen.")
         else:
-            await ctx.send("Először lépj be egy hangcsatornába!")
+            msg = await ctx.send("Először lépj be egy hangcsatornába!")
+            await asyncio.sleep(2)
+            await msg.delete()
+            await ctx.message.delete()
             return
 
     search_results = mdown.search(query)
@@ -126,30 +111,81 @@ async def play(ctx, *, query: str):
         await ctx.send("Nem található zene a megadott kereséssel.")
         return
 
-    if view is None:
-        message = await ctx.send("Betöltés...")
-        view = MusicView(ctx, message, mplay)
-        await message.edit(view=view)
+    playlist = await get_server_playlist(ctx)
 
-    mplay.add(search_results['entries'][0]['title'], search_results['entries'][0]['url'])
+    msg = await find_existing_message(ctx)
+    if not msg:
+        msg = await ctx.send("Betöltés...")
+    view = await get_server_view(ctx, msg)
+    await msg.edit(view=view)
+
+    await choose_song_msg(ctx, response, view, playlist, search_results)
+    bot.loop.create_task(update_view(view))
+
+    await asyncio.sleep(2)
+    try: 
+        await ctx.message.delete()
+    except:
+        print("Az üzenet törlése sikertelen.")
+
+    while response.answer == -1:
+        await asyncio.sleep(0.1)
+
+    if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
+        play_next(ctx, view, playlist)
+
+async def choose_song_msg(ctx, response, view, playlist, search_results):
+    response.choosing = True
+    msg = await ctx.send("Keresés...")
+    choose_view = views.ChoosingView(msg, response, search_results)
+    await choose_view.edit_message()
+
+    while response.answer == -1:
+        await asyncio.sleep(0.1) 
+
+    playlist.add(search_results['entries'][response.answer]['title'],  search_results['entries'][response.answer]['url'])
+
+    response.choosing = False
+    response.answer = -1
 
     if not ctx.voice_client.is_playing():
-        play_next(ctx, view)
-        await loop()
+        play_next(ctx, view, playlist)
+    await asyncio.sleep(1)
+    try:
+        await msg.delete()
+    except:
+        print("Az üzenet törlése sikertelen.")
 
-def play_next(ctx, view):
-    if mplay.isEmpty():
+
+def play_next(ctx, view, playlist):
+    if playlist.isEmpty():
         return
-    mplay.next()
-    url = mplay.current['url']
+    
+    playlist.next()
+    url = playlist.current['url']
     audio_file = mdown.download(url)
-    ctx.voice_client.stop()
-    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next(ctx, view))
 
-async def loop():
+    ctx.voice_client.stop()
+    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next(ctx, view, playlist))
+
+async def update_view(view):
     while True:
-        time.sleep(0.250)        
+        time.sleep(1)        
         await view.edit_message()
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def clear(ctx, number=None):
+    mgs = []
+    if number is None:
+        number = 100
+    number = int(number) 
+    async for msg in ctx.channel.history(limit=number):
+        mgs.append(msg)
+    await ctx.channel.delete_messages(mgs)
+    msg = await ctx.send(f"{number} üzenet törölve.")
+    await asyncio.sleep(5)
+    await msg.delete()
 
 @bot.command()
 @commands.has_permissions(administrator=True)
