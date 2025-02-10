@@ -1,42 +1,62 @@
 from yt_dlp import YoutubeDL
 import random
+import re
 
 ## Config
 download_folder = "music"
 
 search_opts = {
-    'format': 'bestaudio/best',  
-    'noplaylist': True,  
-    'quiet': True,               
-    'extract_flat': True,      
-    'default_search': 'ytsearch',  
+    'format': 'bestaudio/best',
+    'noplaylist': True,
+    'quiet': True,
+    'extract_flat': True,
+    'default_search': 'ytsearch',
 }
 
 download_opts = {
-    'format': 'bestaudio/best',  
-    'outtmpl': f'{download_folder}/%(title)s.%(ext)s', 
-    'noplaylist': True,  
+    'format': 'bestaudio/best',
+    'outtmpl': f'{download_folder}/%(title)s.%(ext)s',
+    'noplaylist': False,
 }
 
 ## Downloader class
 class MusicDownloader:
-    def __init__(self):
-        self.results = []
+    __instance = None
 
+    def __new__(cls):
+        if not cls.__instance:
+            cls.__instance = super(MusicDownloader, cls).__new__(cls)
+        return cls.__instance
+    
     def search(self, query, max_results=5):
-        self.results = []
         with YoutubeDL(search_opts) as ydl:
-            search_result = ydl.extract_info(f'ytsearch{max_results}:{query}', download=False)
-            
-        return search_result
+            if self.__is_url(query):
+                try:
+                    info = ydl.extract_info(query, download=False)
+                    
+                    if 'entries' in info: 
+                        return ["playlist", info]
+                    else: 
+                        if not info['entries']:
+                            return ["link", None]
+                        return ["link", info]
+                except:
+                    return ["link", None]
+            else:
+                search_result = ydl.extract_info(f'ytsearch{max_results}:{query}', download=False)
+                return ["keyword", search_result]
     
     def download(self, url):
         with YoutubeDL(download_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info)  
-            return file_path  
+            file_path = ydl.prepare_filename(info)
+            return file_path
 
-
+    @staticmethod
+    def __is_url(query):
+        url_pattern = re.compile(r'^(https?://)')
+        return bool(url_pattern.match(query))
+    
 ## Playlist class
 class Playlist:
     def __init__(self):

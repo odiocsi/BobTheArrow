@@ -91,6 +91,7 @@ class ChoosingView(View):
 
     async def edit_message(self):
         new_msg = "Válassz egy zenét a listából: \n\n"
+        print(self.__search_results)
         for i, item in enumerate(self.__search_results['entries']):
             new_msg += f"{i+1}. {item['title']}\n"
         await self.__msg.edit(content=new_msg, view=self)

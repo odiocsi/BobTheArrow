@@ -112,11 +112,20 @@ async def play(ctx, *, query: str):
             await delete_message(ctx, msg)
             return
 
-    search_results = mdown.search(query)
-    if not search_results['entries']:
-        await ctx.send("Nem található zene a megadott kereséssel.")
-        await asyncio.sleep(2)
-        await delete_message(ctx)
+    result_type, search_results = mdown.search(query) 
+    if result_type == "link" :
+        if search_results is None:
+            await ctx.send("Érvénytelen hivatkozás.")
+            await asyncio.sleep(2)
+            await delete_message(ctx)
+            return           
+    else:
+        if not search_results['entries']:
+            await ctx.send("Nem található zene a megadott kereséssel.")
+            await asyncio.sleep(2)
+            await delete_message(ctx)
+            return
+        
     playlist = await get_server_playlist(ctx)
 
     msg = await find_existing_message(ctx)
@@ -125,13 +134,20 @@ async def play(ctx, *, query: str):
     view = await get_server_view(ctx, msg)
     await msg.edit(view=view)
 
-    await choose_song_msg(ctx, response, view, playlist, search_results)
+    if result_type == "keyword":
+        await choose_song_msg(ctx, response, view, playlist, search_results)
+    elif result_type == "playlist":
+        for song in search_results['entries']:
+            playlist.add(song['title'], song['url'])
+    else: 
+        playlist.add(search_results['title'], search_results['url'])
+
     bot.loop.create_task(update_view(view))
 
     await asyncio.sleep(2)
     await delete_message(ctx)
 
-    while response.answer == -1:
+    while result_type == "keyword" and response.answer == -1:
         await asyncio.sleep(0.1)
 
     if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
