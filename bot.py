@@ -1,7 +1,7 @@
 import os
 import time
 import asyncio
-
+import json
 from dotenv import load_dotenv
 
 import discord
@@ -21,7 +21,17 @@ ffmpeg_options = {
 }
 
 ## Global variables
-allowed_channel_id = None
+mjson_path = 'json/music_channel.json'
+music_channel_ids = None
+if not os.path.exists(mjson_path) or os.path.getsize(mjson_path) == 0:
+    music_channel_ids = {}
+else:
+    mjson = open(mjson_path, 'r')
+    data = json.load(mjson)
+    data = {int(k):v for k,v in data.items()}
+    music_channel_ids = data
+    mjson.close()
+
 mdown = music.MusicDownloader()
 playlists = {}
 message_views = {}
@@ -91,6 +101,18 @@ async def leave(ctx):
 
 @bot.command()
 async def play(ctx, *, query: str):
+    if ctx.guild.id not in music_channel_ids:
+        msg = await ctx.send("Nincsen beállítva csatorna a zenelejátszóhoz.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return 
+
+    if not music_channel_ids[ctx.guild.id] == ctx.channel.id:
+        msg = await ctx.send("Ezt a parancsot itt nem használhatod.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return 
+
     response = await get_server_response(ctx) 
     if response.choosing:
         msg = await ctx.send("Először válaszd ki a zenét!")
@@ -206,26 +228,41 @@ async def clear(ctx, number=None):
 
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def set_channel(ctx, channel: discord.TextChannel):
-    global allowed_channel_id
-    allowed_channel_id = channel.id 
-    await ctx.send(f"A bot mostantól csak a következő csatornát látja: {channel.mention}")
+async def set_music(ctx):
+    msg = ""
+    if ctx.guild.id not in music_channel_ids:
+        music_channel_ids[ctx.guild.id] = ctx.channel.id
+
+        mjson = open(mjson_path, 'w')
+        json.dump(music_channel_ids, mjson)
+        mjson.close()
+
+        msg = await ctx.send(f"A zene csatorna beállítva a következőre: {ctx.channel.mention}")
+    else:
+        msg = await ctx.send("A zene csatorna már be van állítva.")
+    await asyncio.sleep(2);
+    await delete_message(ctx, msg);
 
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def clear_channel(ctx):
-    global allowed_channel_id
-    allowed_channel_id = None
-    await ctx.send("A bot mostantól látja az összes csatornát.")
+async def clear_music(ctx):
+    msg = ""
+    if ctx.guild.id not in music_channel_ids:
+        msg = await ctx.send("A zene csatorna nincsen beállítva.")
+    else:
+        del music_channel_ids[ctx.guild.id]
+
+        mjson = open(mjson_path, 'w')
+        json.dump(music_channel_ids, mjson)
+        mjson.close()
+
+        msg = await ctx.send("A zene csatorna törölve.")
+    await asyncio.sleep(2)
+    await delete_message(ctx, msg);
 
 @bot.event
 async def on_message(message):
-    global allowed_channel_id
-
     if message.author == bot.user:
-        return
-
-    if allowed_channel_id is not None and message.channel.id != allowed_channel_id:
         return
 
     await bot.process_commands(message)
