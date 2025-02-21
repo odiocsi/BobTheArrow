@@ -64,6 +64,12 @@ async def get_server_response(ctx):
         responses[ctx.guild.id] = Response()
     return responses[ctx.guild.id]
 
+def save_json(which):
+    if (which == "music"):
+        mjson = open(mjson_path, 'w')
+        json.dump(music_channel_ids, mjson)
+        mjson.close()
+
 async def delete_message(ctx = None, msg = None, mgs = None):
     try: 
         if ctx is not None:
@@ -232,10 +238,7 @@ async def set_music(ctx):
     msg = ""
     if ctx.guild.id not in music_channel_ids:
         music_channel_ids[ctx.guild.id] = ctx.channel.id
-
-        mjson = open(mjson_path, 'w')
-        json.dump(music_channel_ids, mjson)
-        mjson.close()
+        save_json("music")
 
         msg = await ctx.send(f"A zene csatorna beállítva a következőre: {ctx.channel.mention}")
     else:
@@ -251,10 +254,7 @@ async def clear_music(ctx):
         msg = await ctx.send("A zene csatorna nincsen beállítva.")
     else:
         del music_channel_ids[ctx.guild.id]
-
-        mjson = open(mjson_path, 'w')
-        json.dump(music_channel_ids, mjson)
-        mjson.close()
+        save_json("music")
 
         msg = await ctx.send("A zene csatorna törölve.")
     await asyncio.sleep(2)
