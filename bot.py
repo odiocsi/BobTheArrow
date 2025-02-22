@@ -1,6 +1,7 @@
 import os
 import time
 import asyncio
+import signal
 import json
 from dotenv import load_dotenv
 
@@ -26,6 +27,8 @@ mdown = music.MusicDownloader()
 playlists = {}
 message_views = {}
 responses = {}
+download_folder = "music"
+awaited_delete = False
 
 ## Db
 json_path = 'json/database.json'
@@ -73,6 +76,16 @@ async def delete_message(ctx = None, msg = None, mgs = None):
     except:
         print("Az üzenet törlése sikertelen.")
 
+def delete_all_files_in_folder():
+    for filename in os.listdir(download_folder):
+        file_path = os.path.join(download_folder, filename)
+        if os.path.isfile(file_path):
+            try: 
+                os.remove(file_path)
+            except:
+                print("Nem sikerült törölni a fájlt.")
+
+
 def ensure_db_structure(guild_id):
     if guild_id not in database:
         database[guild_id] = {"music": None, "lol": None, "rivals": None}
@@ -85,6 +98,13 @@ def db_add_channel(guild_id, category, channel_id):
 def save_database():
     with open(json_path, 'w') as db_json:
         json.dump(database, db_json, indent=4)
+
+async def shutdown():
+    await bot.close() 
+    print("A bot leállt.")
+
+def on_shutdown_signal():
+    asyncio.create_task(shutdown())
 
 @bot.event
 async def on_ready():
@@ -112,7 +132,6 @@ async def leave(ctx):
 
 @bot.command()
 async def play(ctx, *, query: str):
-    print(database)
     if str(ctx.guild.id) not in database:
         msg = await ctx.send("Nincsen beállítva csatorna a zenelejátszóhoz.")
         await asyncio.sleep(2)
@@ -149,15 +168,15 @@ async def play(ctx, *, query: str):
     result_type, search_results = mdown.search(query) 
     if result_type == "link" :
         if search_results is None:
-            await ctx.send("Érvénytelen hivatkozás.")
+            msg = await ctx.send("Érvénytelen hivatkozás.")
             await asyncio.sleep(2)
-            await delete_message(ctx)
+            await delete_message(ctx, msg)
             return           
     else:
         if not search_results['entries']:
-            await ctx.send("Nem található zene a megadott kereséssel.")
+            msg = await ctx.send("Nem található zene a megadott kereséssel.")
             await asyncio.sleep(2)
-            await delete_message(ctx)
+            await delete_message(ctx, msg)
             return
         
     playlist = await get_server_playlist(ctx)
@@ -207,6 +226,8 @@ async def choose_song_msg(ctx, response, view, playlist, search_results):
 
 
 def play_next(ctx, view, playlist):
+    ctx.voice_client.stop()
+
     if playlist.isEmpty():
         return
     
@@ -214,8 +235,8 @@ def play_next(ctx, view, playlist):
     url = playlist.current['url']
     audio_file = mdown.download(url)
 
-    ctx.voice_client.stop()
     ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next(ctx, view, playlist))
+
 
 async def update_view(view):
     while True:
@@ -242,7 +263,7 @@ async def clear(ctx, number=None):
 @commands.has_permissions(administrator=True)
 async def set_music(ctx):
     msg = ""
-    if str(ctx.guild.id) not in database:
+    if database[str(ctx.guild.id)]['music'] == None:
         db_add_channel(str(ctx.guild.id), "music", ctx.channel.id)
         save_database()
 
@@ -278,8 +299,11 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN is None:
     raise ValueError("Hiányzik a token.")
-    
+
+delete_all_files_in_folder()
+
 try:
+    signal.signal(signal.SIGINT, lambda signal, frame: on_shutdown_signal())
     bot.run(TOKEN)
 except Exception as e:
     print(f"Hiba történt: {e}")

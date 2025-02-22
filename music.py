@@ -15,8 +15,8 @@ search_opts = {
 
 download_opts = {
     'format': 'bestaudio/best',
-    'outtmpl': f'{download_folder}/%(title)s.%(ext)s',
     'noplaylist': False,
+    'outtmpl': f'{download_folder}/%(title)s.%(ext)s',
 }
 
 ## Downloader class
@@ -37,8 +37,6 @@ class MusicDownloader:
                     if 'entries' in info: 
                         return ["playlist", info]
                     else: 
-                        if not info['entries']:
-                            return ["link", None]
                         return ["link", info]
                 except:
                     return ["link", None]
