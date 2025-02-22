@@ -21,21 +21,19 @@ ffmpeg_options = {
 }
 
 ## Global variables
-mjson_path = 'json/music_channel.json'
-music_channel_ids = None
-if not os.path.exists(mjson_path) or os.path.getsize(mjson_path) == 0:
-    music_channel_ids = {}
-else:
-    mjson = open(mjson_path, 'r')
-    data = json.load(mjson)
-    data = {int(k):v for k,v in data.items()}
-    music_channel_ids = data
-    mjson.close()
-
+database = None
 mdown = music.MusicDownloader()
 playlists = {}
 message_views = {}
 responses = {}
+
+## Db
+json_path = 'json/database.json'
+if not os.path.exists(json_path) or os.path.getsize(json_path) == 0:
+    database = {}
+else:
+    with open(json_path, 'r') as db_json:
+        database = json.load(db_json) 
 
 ## Util
 class Response():
@@ -64,12 +62,6 @@ async def get_server_response(ctx):
         responses[ctx.guild.id] = Response()
     return responses[ctx.guild.id]
 
-def save_json(which):
-    if (which == "music"):
-        mjson = open(mjson_path, 'w')
-        json.dump(music_channel_ids, mjson)
-        mjson.close()
-
 async def delete_message(ctx = None, msg = None, mgs = None):
     try: 
         if ctx is not None:
@@ -80,6 +72,19 @@ async def delete_message(ctx = None, msg = None, mgs = None):
             await msg.delete()
     except:
         print("Az üzenet törlése sikertelen.")
+
+def ensure_db_structure(guild_id):
+    if guild_id not in database:
+        database[guild_id] = {"music": None, "lol": None, "rivals": None}
+
+def db_add_channel(guild_id, category, channel_id):
+    ensure_db_structure(guild_id)  
+    if category in database[guild_id]:  
+        database[guild_id][category] = channel_id
+
+def save_database():
+    with open(json_path, 'w') as db_json:
+        json.dump(database, db_json, indent=4)
 
 @bot.event
 async def on_ready():
@@ -107,13 +112,14 @@ async def leave(ctx):
 
 @bot.command()
 async def play(ctx, *, query: str):
-    if ctx.guild.id not in music_channel_ids:
+    print(database)
+    if str(ctx.guild.id) not in database:
         msg = await ctx.send("Nincsen beállítva csatorna a zenelejátszóhoz.")
         await asyncio.sleep(2)
         await delete_message(ctx, msg)
         return 
 
-    if not music_channel_ids[ctx.guild.id] == ctx.channel.id:
+    if not database[str(ctx.guild.id)]['music'] == ctx.channel.id:
         msg = await ctx.send("Ezt a parancsot itt nem használhatod.")
         await asyncio.sleep(2)
         await delete_message(ctx, msg)
@@ -236,9 +242,9 @@ async def clear(ctx, number=None):
 @commands.has_permissions(administrator=True)
 async def set_music(ctx):
     msg = ""
-    if ctx.guild.id not in music_channel_ids:
-        music_channel_ids[ctx.guild.id] = ctx.channel.id
-        save_json("music")
+    if str(ctx.guild.id) not in database:
+        db_add_channel(str(ctx.guild.id), "music", ctx.channel.id)
+        save_database()
 
         msg = await ctx.send(f"A zene csatorna beállítva a következőre: {ctx.channel.mention}")
     else:
@@ -250,11 +256,11 @@ async def set_music(ctx):
 @commands.has_permissions(administrator=True)
 async def clear_music(ctx):
     msg = ""
-    if ctx.guild.id not in music_channel_ids:
+    if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['music'] == None:
         msg = await ctx.send("A zene csatorna nincsen beállítva.")
     else:
-        del music_channel_ids[ctx.guild.id]
-        save_json("music")
+        database[str(ctx.guild.id)]['music'] = None
+        save_database()
 
         msg = await ctx.send("A zene csatorna törölve.")
     await asyncio.sleep(2)
