@@ -19,7 +19,7 @@ class RivalsAPI:
             if season == "update":
                 requests.get(f"{self.__baseurl}player/{name}/update", headers=self.__headers)
             else: 
-                response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=certifi.where())
+                response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=False)
 
                 if response.status_code == 200:
                     data = response.json()
@@ -42,7 +42,7 @@ class RivalsAPI:
 
     def get_map_data(self, name, season):
         try:
-            response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=certifi.where())
+            response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=False)
 
             if response.status_code == 200:
                 data = response.json()
@@ -72,7 +72,7 @@ class RivalsAPI:
 
     def get_matchup_data(self, name, season):
         try:
-            response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=certifi.where())
+            response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=False)
 
             if response.status_code == 200:
                 data = response.json()
