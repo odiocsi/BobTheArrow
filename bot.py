@@ -284,6 +284,7 @@ async def rivals(ctx, name, season, typ=None):
     else:
         if season == "update":
             msg = await ctx.send(f"{name} profiljának frissítése megkezdődött.")      
+            data = rivals_api.get_player_data(name, season)
         else:
             msg = await ctx.send("Betöltés...")
             data = rivals_api.get_player_data(name, season)

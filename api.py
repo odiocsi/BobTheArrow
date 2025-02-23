@@ -6,6 +6,7 @@ from PIL import Image
 from io import BytesIO
 from datetime import datetime
 import pytz
+import certifi
 
 
 class RivalsAPI:
@@ -18,7 +19,7 @@ class RivalsAPI:
             if season == "update":
                 requests.get(f"{self.__baseurl}player/{name}/update", headers=self.__headers)
             else: 
-                response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers)
+                response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=certifi.where())
 
                 if response.status_code == 200:
                     data = response.json()
@@ -41,7 +42,7 @@ class RivalsAPI:
 
     def get_map_data(self, name, season):
         try:
-            response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers)
+            response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=certifi.where())
 
             if response.status_code == 200:
                 data = response.json()
@@ -51,6 +52,7 @@ class RivalsAPI:
                     'update': self.__get_time(data['updates']['last_history_update']),
                     'maps': [
                         {
+                            'name': 'N/A',
                             'matches': m['matches'],
                             'winrate': f"{m['wins'] / m['matches'] * 100:.2f}" if m['matches'] > 0 else "0.00",
                             'img_url':f"https://marvelrivalsapi.com/{m['map_thumbnail']}"
@@ -70,7 +72,7 @@ class RivalsAPI:
 
     def get_matchup_data(self, name, season):
         try:
-            response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers)
+            response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=certifi.where())
 
             if response.status_code == 200:
                 data = response.json()

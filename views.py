@@ -141,7 +141,7 @@ class RivalsMapView(View):
 
         for m in self.__data['maps']:
             map_data = f"Meccsek: {m['matches']}\nGyőzelmi arány: {m['winrate']}"
-            embed.add_field(name="Map_Name", value=map_data, inline=False)
+            embed.add_field(name=m['name'], value=map_data, inline=False)
 
         embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
 
