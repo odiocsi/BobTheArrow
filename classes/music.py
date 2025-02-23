@@ -89,7 +89,7 @@ class Playlist:
             return ""
 
     def isEmpty(self):  
-        return not self.__playlist
+        return len(self.__playlist) == 0
 
     def shuffle(self):
         random.shuffle(self.__playlist)
@@ -119,15 +119,15 @@ class Playlist:
             string = ""
             if not self.__loop == "whole":
                 for i, item in enumerate(self.__playlist):
-                    string += f"{i}. {item['title']}\n"
+                    string += f"{i+1}. {item['title']}\n"
             else:
                 list2 = self.__playlist[self.__index+1:]
                 for i, item in enumerate(list2):
-                    string += f"{i}. {item['title']}\n"
+                    string += f"{i+1}. {item['title']}\n"
                 list1 = self.__playlist[:self.__index+1]
                 for i, item in enumerate(list1):
-                    string += f"{i}. {item['title']}\n"
+                    string += f"{i+1}. {item['title']}\n"
             return string
         else:
-            return  "A lejátszasi lista üres"
+            return  "Nincsen zene a lejátszási listában"
 

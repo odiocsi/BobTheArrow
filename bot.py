@@ -73,6 +73,10 @@ async def get_server_response(ctx):
 async def choose_song_msg(ctx, response, view, playlist, search_results):
     response.choosing = True
     msg = await ctx.send(locale.searching)
+    embed = discord.Embed(title="Találatok", color=0xFF0000)
+    embed.add_field(name="Státusz", value=locale.searching, inline=False)
+    await msg.edit(content=None, embed=embed)
+
     choose_view = views.ChoosingView(msg, response, search_results)
     await choose_view.edit_message()
 
@@ -143,14 +147,14 @@ def save_database():
 
 async def shutdown():
     await bot.close() 
-    print(locale.started)
+    print(locale.stopped)
 
 def on_shutdown_signal():
     asyncio.create_task(shutdown())
 
 @bot.event
 async def on_ready():
-    print(locale.stopped)
+    print(locale.started)
 
 ## Commands
 @bot.command()
@@ -222,6 +226,9 @@ async def play(ctx, *, query: str):
     msg = await find_existing_message(ctx)
     if not msg:
         msg = await ctx.send("Betöltés...")
+        embed = discord.Embed(title="Zenelejátszó", color=0xFF0000)
+        embed.add_field(name="Státusz", value="Betöltés...", inline=False)
+        await msg.edit(content=None, embed=embed)
     view = await get_server_view(ctx, msg)
     await msg.edit(view=view)
 

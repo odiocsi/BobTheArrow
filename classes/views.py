@@ -10,13 +10,13 @@ class MusicView(View):
         self.__playlist = playlist
         self.__loopstatus = ""
 
-        self.__plpa_button = Button(style=discord.ButtonStyle.primary, label="⏯️")
+        self.__plpa_button = Button(style=discord.ButtonStyle.secondary, label="⏯️")
         self.__plpa_button.callback = self.__plpa
-        self.__shuff_button = Button(style=discord.ButtonStyle.primary, label="🔀")
+        self.__shuff_button = Button(style=discord.ButtonStyle.secondary, label="🔀")
         self.__shuff_button.callback = self.__shuffle
-        self.__skip_button = Button(style=discord.ButtonStyle.primary, label="⏩")
+        self.__skip_button = Button(style=discord.ButtonStyle.secondary, label="⏩")
         self.__skip_button.callback = self.__skip
-        self.__loop_button = Button(style=discord.ButtonStyle.primary, label="🔁")
+        self.__loop_button = Button(style=discord.ButtonStyle.secondary, label="🔁")
         self.__loop_button.callback = self.__loop
 
         self.__add_buttons()
@@ -51,23 +51,25 @@ class MusicView(View):
         self.add_item(self.__loop_button)
 
     async def edit_message(self):
+        embed = discord.Embed(title="Zenelejátszó", color=0xFF0000)
+
         if self.__playlist.isEmpty() and not self.__ctx.voice_client.is_playing() and not self.__isPaused:
-           new_msg = "Státusz: Jelenleg nem megy zene."
+           embed.add_field(name="Státusz", value="Jelenleg nem megy zene.", inline=False)
         else:
-            new_msg = ""
             if self.__isPaused:
-               new_msg = f"Státusz: ⏸️{self.__loopstatus}\n\n"
+                embed.add_field(name="Státusz", value=f"⏸️{self.__loopstatus}", inline=False)
             else:
-               new_msg = f"Státusz: ▶️{self.__loopstatus}\n\n"
+                embed.add_field(name="Státusz", value=f"▶️{self.__loopstatus}", inline=False)
 
             if self.__playlist.current:
-               new_msg += f"Jelenlegi zene: {self.__playlist.current['title']}"
+                embed.add_field(name="Jelenlegi zene", value=f"{self.__playlist.current['title']}", inline=False)
             else:
-               new_msg += "Jelenlegi zene: Nincs"
-            new_msg += f"\n\n "+self.__playlist.tostring()
+                embed.add_field(name="Jelenlegi zene", value="N/A", inline=False)
+
+            embed.add_field(name="Lejásztási lista", value=f"{self.__playlist.tostring()}", inline=False)   
 
         self.__add_buttons()
-        await self.__msg.edit(content=new_msg, view=self)
+        await self.__msg.edit(content=None, embed=embed, view=self)
 
 
 class ChoosingView(View):
@@ -76,9 +78,10 @@ class ChoosingView(View):
         self.__msg = msg
         self.__resp = response
         self.__search_results = search_results
+        self.__emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
 
         for i in range(5):
-            button = Button(style=discord.ButtonStyle.primary, label=f"{i + 1}️⃣")
+            button = Button(style=discord.ButtonStyle.secondary, label=f"{self.__emojis[i]}")
             button.callback = self.__create_callback(i)
             self.add_item(button)
 
@@ -90,10 +93,15 @@ class ChoosingView(View):
         return callback
 
     async def edit_message(self):
-        new_msg = "Válassz egy zenét a listából: \n\n"
+        embed = discord.Embed(title="Találatok", color=0xFF0000)
+
+        results = ""
         for i, item in enumerate(self.__search_results['entries']):
-            new_msg += f"{i+1}. {item['title']}\n"
-        await self.__msg.edit(content=new_msg, view=self)
+            results += f"{i+1}. {item['title']}\n"
+
+        embed.add_field(name="Válassz egy zenét a listából:", value=results, inline=False)
+
+        await self.__msg.edit(content=None, embed=embed, view=self)
 
 class RivalsPlayerView(View):
     def __init__(self, msg, data, name, season):
