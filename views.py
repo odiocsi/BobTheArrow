@@ -94,3 +94,99 @@ class ChoosingView(View):
         for i, item in enumerate(self.__search_results['entries']):
             new_msg += f"{i+1}. {item['title']}\n"
         await self.__msg.edit(content=new_msg, view=self)
+
+class RivalsPlayerView(View):
+    def __init__(self, msg, data, name):
+        super().__init__(timeout=None)
+        self.__msg = msg
+        self.__data = data 
+        self.__name = name
+
+    async def edit_message(self):
+        string = f"{self.__name} rangsorolt statisztikái"
+        title = f"{string}{self.__calculate_spaces(string)}"
+        embed = discord.Embed(title=title, color=0x800080)
+
+        embed.set_thumbnail(url=self.__data['heroes'][0]['img_url'])  
+
+        embed.add_field(name="Rank", value=self.__data['rank'], inline=False)
+        
+        embed.add_field(name="Győzelmi arány", value=f"{self.__data['winrate']}%", inline=False)
+
+        heroes_data = ""
+        for hero in self.__data['heroes']:
+            heroes_data += f"\n**{hero['name'].title()}**\nMeccsek: {hero['matches']}\nGyőzelmi arány: {hero['winrate']}%\nMVP/SVP: {hero['mvpsvp']}\nJátszott idő: {hero['playtime']} óra\n"
+        embed.add_field(name="Top 3 hős", value=heroes_data, inline=False)
+
+        embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
+
+        await self.__msg.edit(content=None, embed=embed, view=self)
+
+    def __calculate_spaces(self, title):
+        if (70-len(title)>0): 
+            return (70-len(title))*" \u200b"
+        return ""
+    
+class RivalsMapView(View):
+    def __init__(self, msg, data, name):
+        super().__init__(timeout=None)
+        self.__msg = msg
+        self.__data = data 
+        self.__name = name
+
+    async def edit_message(self):
+        string = f"{self.__name} pálya statisztikái"
+        title = f"{string}{self.__calculate_spaces(string)}"
+        embed = discord.Embed(title=title, color=0x800080)
+
+        for m in self.__data['maps']:
+            map_data = f"Meccsek: {m['matches']}\nGyőzelmi arány: {m['winrate']}"
+            embed.add_field(name="Map_Name", value=map_data, inline=False)
+
+        embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
+
+        await self.__msg.edit(content=None, embed=embed, view=self)
+
+    def __calculate_spaces(self, title):
+        if (50-len(title)>0): 
+            return (50-len(title))*" \u200b"
+        return ""
+    
+class RivalsMatchupView(View):
+    def __init__(self, msg, data, name, half):
+        super().__init__(timeout=None)
+        self.__msg = msg
+        self.__data = data 
+        self.__name = name
+        self.__half = half
+
+    async def edit_message(self):
+        embed = None
+        if self.__half == 1:
+            string = f"{self.__name} matchup statisztikái"
+            title = f"{string}{self.__calculate_spaces(string)}"
+            embed = discord.Embed(title=title, color=0x800080)
+
+            for h in self.__data['heroes'][:24]:
+                map_data = f"Meccsek: {h['matches']}\nGyőzelmi arány: {h['winrate']}"
+                embed.add_field(name=h['name'].title(), value=map_data, inline=False)
+
+        elif self.__half == 2:
+            string = f"{self.__name} matchup statisztikái"
+            title = f"{string}{self.__calculate_spaces(string)}"
+            embed = discord.Embed(title=title, color=0x800080)
+            for h in self.__data['heroes'][24:]:
+                map_data = f"Meccsek: {h['matches']}\nGyőzelmi arány: {h['winrate']}"
+                embed.add_field(name=h['name'].title(), value=map_data, inline=False)
+
+        if len(self.__data['heroes']) < 25 and self.__half == 1:
+            embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
+        elif self.__half == 2:
+            embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
+
+        await self.__msg.edit(content=None, embed=embed, view=self)
+
+    def __calculate_spaces(self, title):
+        if (50-len(title)>0): 
+            return (50-len(title))*" \u200b"
+        return ""

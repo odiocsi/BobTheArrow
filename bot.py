@@ -10,6 +10,7 @@ from discord.ext import commands
 
 import music
 import views
+import api
 
 ## Config
 intents = discord.Intents.default()
@@ -132,7 +133,7 @@ async def leave(ctx):
 
 @bot.command()
 async def play(ctx, *, query: str):
-    if str(ctx.guild.id) not in database:
+    if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['music'] == None:
         msg = await ctx.send("Nincsen beállítva csatorna a zenelejátszóhoz.")
         await asyncio.sleep(2)
         await delete_message(ctx, msg)
@@ -242,6 +243,56 @@ async def update_view(view):
     while True:
         time.sleep(1)        
         await view.edit_message()
+        views.MusicView(ctx, msg, await get_server_playlist(ctx))
+
+@bot.command()
+async def rivals(ctx, name, season, typ=None):
+    if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['rivals'] == None:
+        msg = await ctx.send("Nincsen beállítva csatorna a rivals statisztikákhoz.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return 
+
+    if not database[str(ctx.guild.id)]['rivals'] == ctx.channel.id:
+        msg = await ctx.send("Ezt a parancsot itt nem használhatod.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return 
+
+    if season not in ["0", "1", "update"]:
+        season = "1.5"
+
+    if typ == "map":
+        msg = await ctx.send("Betöltés...")
+        data = rivals_api.get_map_data(name, season)
+
+        view = views.RivalsMapView(msg, data, name)
+        await view.edit_message()
+        await msg.edit(view=view)
+    elif typ == "matchup":
+        msg = await ctx.send("Betöltés...")
+        data = rivals_api.get_matchup_data(name, season)
+
+        view = views.RivalsMatchupView(msg, data, name, 1)
+        await view.edit_message()
+        await msg.edit(view=view)     
+        if len(data['heroes']) > 24:
+            msg = await ctx.send("Betöltés...")
+            view = views.RivalsMatchupView(msg, data, name, 2)
+            await view.edit_message()
+            await msg.edit(view=view)  
+    else:
+        if season == "update":
+            msg = await ctx.send(f"{name} profiljának frissítése megkezdődött.")      
+        else:
+            msg = await ctx.send("Betöltés...")
+            data = rivals_api.get_player_data(name, season)
+
+            view = views.RivalsPlayerView(msg, data, name)
+
+            await view.edit_message()
+            await msg.edit(view=view)
+
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -271,7 +322,7 @@ async def set_music(ctx):
     else:
         msg = await ctx.send("A zene csatorna már be van állítva.")
     await asyncio.sleep(2);
-    await delete_message(ctx, msg);
+    await delete_message(ctx, msg)
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -285,7 +336,35 @@ async def clear_music(ctx):
 
         msg = await ctx.send("A zene csatorna törölve.")
     await asyncio.sleep(2)
-    await delete_message(ctx, msg);
+    await delete_message(ctx, msg)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def set_rivals(ctx):
+    msg = ""
+    if database[str(ctx.guild.id)]['rivals'] == None:
+        db_add_channel(str(ctx.guild.id), "rivals", ctx.channel.id)
+        save_database()
+
+        msg = await ctx.send(f"A rivals csatorna beállítva a következőre: {ctx.channel.mention}")
+    else:
+        msg = await ctx.send("A rivals csatorna már be van állítva.")
+    await asyncio.sleep(2);
+    await delete_message(ctx, msg)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def clear_rivals(ctx):
+    msg = ""
+    if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['rivals'] == None:
+        msg = await ctx.send("A rivals csatorna nincsen beállítva.")
+    else:
+        database[str(ctx.guild.id)]['rivals'] = None
+        save_database()
+
+        msg = await ctx.send("A rivals csatorna törölve.")
+    await asyncio.sleep(2)
+    await delete_message(ctx, msg)
 
 @bot.event
 async def on_message(message):
@@ -296,6 +375,11 @@ async def on_message(message):
 
 ## Bot init
 load_dotenv()
+TOKEN = os.getenv("RIVALS_API_KEY")
+if TOKEN is None:
+    raise ValueError("Hiányzik a token.")
+rivals_api = api.RivalsAPI(TOKEN)
+
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN is None:
     raise ValueError("Hiányzik a token.")
