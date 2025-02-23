@@ -44,10 +44,6 @@ class RivalsAPI:
             else: 
                 response = requests.get(f"{self.__baseurl}player/{name}", params={'season': season}, headers=self.__headers, verify=False)
 
-                abc = open("abc.json", "w")
-                json.dump(response.json(), abc, indent=4)
-                abc.close()
-
                 if response.status_code == 200:
                     data = response.json()
 

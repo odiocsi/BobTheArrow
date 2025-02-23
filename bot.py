@@ -288,54 +288,85 @@ async def rivals(ctx, name=None, season=None, typ=None):
     
 
     if typ == "map":
-        msg = await ctx.send("Betöltés...")
+        msg = await ctx.send("...")
+        embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+        embed.add_field(name="Státusz", value="Betöltés...", inline=False)
+        await msg.edit(content=None, embed=embed)
         data = rivals_api.get_map_data(name, season)
+        if data == False:
+            embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+            embed.add_field(name="Státusz", value="A megadott profil privát", inline=False)
+            await msg.edit(content=None, embed=embed)
+            return
         if data is None:
-            msg = await ctx.send("Váratlan hiba történt.")
+            embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+            embed.add_field(name="Státusz", value="Váratlan hiba történt", inline=False)
+            await msg.edit(content=None, embed=embed)
             return
 
         view = views.RivalsMapView(msg, data, name, season)
         await view.edit_message()
         await msg.edit(view=view)
     elif typ == "matchup":
-        msg = await ctx.send("Betöltés...")
+        msg = await ctx.send("...")
+        embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+        embed.add_field(name="Státusz", value="Betöltés...", inline=False)
+        await msg.edit(content=None, embed=embed)
         data = rivals_api.get_matchup_data(name, season)
 
         if data == False:
-            msg = await ctx.send("A megadott profil privát.")
+            embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+            embed.add_field(name="Státusz", value="A megadott profil privát", inline=False)
+            await msg.edit(content=None, embed=embed)
             return
         if data is None:
-            msg = await ctx.send("Váratlan hiba történt.")
+            embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+            embed.add_field(name="Státusz", value="Váratlan hiba történt", inline=False)
+            await msg.edit(content=None, embed=embed)
             return
 
         view = views.RivalsMatchupView(msg, data, name, season, 1)
         await view.edit_message()
         await msg.edit(view=view)     
         if len(data['heroes']) > 24:
-            msg = await ctx.send("Betöltés...")
+            msg = await ctx.send("...")
             view = views.RivalsMatchupView(msg, data, name, season, 2)
             await view.edit_message()
             await msg.edit(view=view)  
     else:
         if season == "update":
-            msg = await ctx.send(f"{name} profiljának frissítése megkezdődött.")      
+            msg = await ctx.send("...")
+            embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+            embed.add_field(name="Státusz", value="A profil frissítése megkezdödött", inline=False)
+            await msg.edit(content=None, embed=embed)
             data = rivals_api.get_player_data(name, season)
 
             if data == False:
-                msg = await ctx.send("A megadott profil privát.")
+                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+                embed.add_field(name="Státusz", value="A megadott profil privát", inline=False)
+                await msg.edit(content=None, embed=embed)
                 return
             if data is None:
-                msg = await ctx.send("Váratlan hiba történt.")
+                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+                embed.add_field(name="Státusz", value="Váratlan hiba történt", inline=False)
+                await msg.edit(content=None, embed=embed)
                 return
         else:
-            msg = await ctx.send("Betöltés...")
+            msg = await ctx.send("...")
+            embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+            embed.add_field(name="Státusz", value="Betöltés...", inline=False)
+            await msg.edit(content=None, embed=embed)
             data = rivals_api.get_player_data(name, season)
 
             if data == False:
-                msg = await ctx.send("A megadott profil privát.")
+                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+                embed.add_field(name="Státusz", value="A megadott profil privát", inline=False)
+                await msg.edit(content=None, embed=embed)
                 return
             if data is None:
-                msg = await ctx.send("Váratlan hiba történt.")
+                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
+                embed.add_field(name="Státusz", value="Váratlan hiba történt", inline=False)
+                await msg.edit(content=None, embed=embed)
                 return
 
             view = views.RivalsPlayerView(msg, data, name, season)
