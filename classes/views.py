@@ -96,14 +96,15 @@ class ChoosingView(View):
         await self.__msg.edit(content=new_msg, view=self)
 
 class RivalsPlayerView(View):
-    def __init__(self, msg, data, name):
+    def __init__(self, msg, data, name, season):
         super().__init__(timeout=None)
         self.__msg = msg
         self.__data = data 
         self.__name = name
+        self.__season = season
 
     async def edit_message(self):
-        string = f"{self.__name} rangsorolt statisztikái"
+        string = f"{self.__name} rangsorolt statisztikái S{self.__season}"
         title = f"{string}{self.__calculate_spaces(string)}"
         embed = discord.Embed(title=title, color=0x800080)
 
@@ -116,7 +117,7 @@ class RivalsPlayerView(View):
         heroes_data = ""
         for hero in self.__data['heroes']:
             heroes_data += f"\n**{hero['name'].title()}**\nMeccsek: {hero['matches']}\nGyőzelmi arány: {hero['winrate']}%\nMVP/SVP: {hero['mvpsvp']}\nJátszott idő: {hero['playtime']} óra\n"
-        embed.add_field(name="Top 3 hős", value=heroes_data, inline=False)
+        embed.add_field(name=f"Top {len(self.__data['heroes'])} hős", value=heroes_data, inline=False)
 
         embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
 
@@ -128,14 +129,15 @@ class RivalsPlayerView(View):
         return ""
     
 class RivalsMapView(View):
-    def __init__(self, msg, data, name):
+    def __init__(self, msg, data, name, season):
         super().__init__(timeout=None)
         self.__msg = msg
         self.__data = data 
         self.__name = name
+        self.__season = season
 
     async def edit_message(self):
-        string = f"{self.__name} pálya statisztikái"
+        string = f"{self.__name} pálya statisztikái S{self.__season}"
         title = f"{string}{self.__calculate_spaces(string)}"
         embed = discord.Embed(title=title, color=0x800080)
 
@@ -153,17 +155,18 @@ class RivalsMapView(View):
         return ""
     
 class RivalsMatchupView(View):
-    def __init__(self, msg, data, name, half):
+    def __init__(self, msg, data, name, season, half):
         super().__init__(timeout=None)
         self.__msg = msg
         self.__data = data 
         self.__name = name
+        self.__season = season
         self.__half = half
 
     async def edit_message(self):
         embed = None
         if self.__half == 1:
-            string = f"{self.__name} matchup statisztikái"
+            string = f"{self.__name} matchup statisztikái S{self.__season}"
             title = f"{string}{self.__calculate_spaces(string)}"
             embed = discord.Embed(title=title, color=0x800080)
 
@@ -172,7 +175,7 @@ class RivalsMatchupView(View):
                 embed.add_field(name=h['name'].title(), value=map_data, inline=False)
 
         elif self.__half == 2:
-            string = f"{self.__name} matchup statisztikái"
+            string = f"{self.__name} matchup statisztikái S{self.__season}"
             title = f"{string}{self.__calculate_spaces(string)}"
             embed = discord.Embed(title=title, color=0x800080)
             for h in self.__data['heroes'][24:]:

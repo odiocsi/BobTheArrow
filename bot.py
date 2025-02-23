@@ -8,15 +8,19 @@ from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 
-import music
-import views
-import api
+import config
+from classes import api
+from classes import music
+from classes import views
+
+if config.lang == "hu":
+    from locales import hu as locale
 
 ## Config
 intents = discord.Intents.default()
 intents.messages = True 
 intents.message_content = True  
-bot = commands.Bot(command_prefix=".", intents=intents)
+bot = commands.Bot(command_prefix=config.command_prefix, intents=intents)
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
@@ -28,11 +32,11 @@ mdown = music.MusicDownloader()
 playlists = {}
 message_views = {}
 responses = {}
-download_folder = "music"
+download_folder = config.download_path
 awaited_delete = False
 
 ## Db
-json_path = 'json/database.json'
+json_path = config.database_path
 if not os.path.exists(json_path) or os.path.getsize(json_path) == 0:
     database = {}
 else:
@@ -66,6 +70,44 @@ async def get_server_response(ctx):
         responses[ctx.guild.id] = Response()
     return responses[ctx.guild.id]
 
+async def choose_song_msg(ctx, response, view, playlist, search_results):
+    response.choosing = True
+    msg = await ctx.send(locale.searching)
+    choose_view = views.ChoosingView(msg, response, search_results)
+    await choose_view.edit_message()
+
+    while response.answer == -1:
+        await asyncio.sleep(0.1) 
+
+    playlist.add(search_results['entries'][response.answer]['title'],  search_results['entries'][response.answer]['url'])
+
+    response.choosing = False
+    response.answer = -1
+
+    if not ctx.voice_client.is_playing():
+        play_next(ctx, view, playlist)
+    await asyncio.sleep(1)
+
+
+def play_next(ctx, view, playlist):
+    ctx.voice_client.stop()
+
+    if playlist.isEmpty():
+        return
+    
+    playlist.next()
+    url = playlist.current['url']
+    audio_file = mdown.download(url)
+
+    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next(ctx, view, playlist))
+
+
+async def update_view(view):
+    while True:
+        time.sleep(1)        
+        await view.edit_message()
+
+
 async def delete_message(ctx = None, msg = None, mgs = None):
     try: 
         if ctx is not None:
@@ -75,7 +117,7 @@ async def delete_message(ctx = None, msg = None, mgs = None):
         if msg is not None:
             await msg.delete()
     except:
-        print("Az üzenet törlése sikertelen.")
+        print(locale.error_delete_msg)
 
 def delete_all_files_in_folder():
     for filename in os.listdir(download_folder):
@@ -84,8 +126,7 @@ def delete_all_files_in_folder():
             try: 
                 os.remove(file_path)
             except:
-                print("Nem sikerült törölni a fájlt.")
-
+                print(locale.error_delete_file)
 
 def ensure_db_structure(guild_id):
     if guild_id not in database:
@@ -102,34 +143,30 @@ def save_database():
 
 async def shutdown():
     await bot.close() 
-    print("A bot leállt.")
+    print(locale.started)
 
 def on_shutdown_signal():
     asyncio.create_task(shutdown())
 
 @bot.event
 async def on_ready():
-    print('A bot elindult.')
+    print(locale.stopped)
 
-## Parancsok
-@bot.command()
-async def test(ctx):
-    await ctx.send("Hello World!")
-
+## Commands
 @bot.command()
 async def join(ctx):
     if ctx.author.voice:
         channel = ctx.author.voice.channel
         await channel.connect()
     else:
-        await ctx.send("Először lépj be egy hangcsatornába!")
+        await ctx.send(locale.error_no_channel)
 
 @bot.command()
 async def leave(ctx):
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
     else:
-        await ctx.send("Nem vagyok egy hangcsatornában sem!")
+        await ctx.send(locale.error_not_in_channel)
 
 @bot.command()
 async def play(ctx, *, query: str):
@@ -207,46 +244,8 @@ async def play(ctx, *, query: str):
     if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
         play_next(ctx, view, playlist)
 
-async def choose_song_msg(ctx, response, view, playlist, search_results):
-    response.choosing = True
-    msg = await ctx.send("Keresés...")
-    choose_view = views.ChoosingView(msg, response, search_results)
-    await choose_view.edit_message()
-
-    while response.answer == -1:
-        await asyncio.sleep(0.1) 
-
-    playlist.add(search_results['entries'][response.answer]['title'],  search_results['entries'][response.answer]['url'])
-
-    response.choosing = False
-    response.answer = -1
-
-    if not ctx.voice_client.is_playing():
-        play_next(ctx, view, playlist)
-    await asyncio.sleep(1)
-
-
-def play_next(ctx, view, playlist):
-    ctx.voice_client.stop()
-
-    if playlist.isEmpty():
-        return
-    
-    playlist.next()
-    url = playlist.current['url']
-    audio_file = mdown.download(url)
-
-    ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next(ctx, view, playlist))
-
-
-async def update_view(view):
-    while True:
-        time.sleep(1)        
-        await view.edit_message()
-        views.MusicView(ctx, msg, await get_server_playlist(ctx))
-
 @bot.command()
-async def rivals(ctx, name, season, typ=None):
+async def rivals(ctx, name=None, season=None, typ=None):
     if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['rivals'] == None:
         msg = await ctx.send("Nincsen beállítva csatorna a rivals statisztikákhoz.")
         await asyncio.sleep(2)
@@ -259,37 +258,80 @@ async def rivals(ctx, name, season, typ=None):
         await delete_message(ctx, msg)
         return 
 
-    if season not in ["0", "1", "update"]:
-        season = "1.5"
+    if name is None:
+        msg = await ctx.send("A név megadása kötelező.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return      
+
+    if season not in ["0", "1", "1.5", "update"]:
+        if season is None:
+            season = "1.5"
+        else:
+            msg = await ctx.send("Hibás 2. paraméter.")
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+    if typ not in ["map", "matchup", None]: 
+        msg = await ctx.send("Hibás 3. paraméter.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return
+    
 
     if typ == "map":
         msg = await ctx.send("Betöltés...")
         data = rivals_api.get_map_data(name, season)
+        if data is None:
+            msg = await ctx.send("Váratlan hiba történt.")
+            return
 
-        view = views.RivalsMapView(msg, data, name)
+        view = views.RivalsMapView(msg, data, name, season)
         await view.edit_message()
         await msg.edit(view=view)
     elif typ == "matchup":
         msg = await ctx.send("Betöltés...")
         data = rivals_api.get_matchup_data(name, season)
 
-        view = views.RivalsMatchupView(msg, data, name, 1)
+        if data == False:
+            msg = await ctx.send("A megadott profil privát.")
+            return
+        if data is None:
+            msg = await ctx.send("Váratlan hiba történt.")
+            return
+
+        view = views.RivalsMatchupView(msg, data, name, season, 1)
         await view.edit_message()
         await msg.edit(view=view)     
         if len(data['heroes']) > 24:
             msg = await ctx.send("Betöltés...")
-            view = views.RivalsMatchupView(msg, data, name, 2)
+            view = views.RivalsMatchupView(msg, data, name, season, 2)
             await view.edit_message()
             await msg.edit(view=view)  
     else:
         if season == "update":
             msg = await ctx.send(f"{name} profiljának frissítése megkezdődött.")      
             data = rivals_api.get_player_data(name, season)
+
+            if data == False:
+                msg = await ctx.send("A megadott profil privát.")
+                return
+            if data is None:
+                msg = await ctx.send("Váratlan hiba történt.")
+                return
         else:
             msg = await ctx.send("Betöltés...")
             data = rivals_api.get_player_data(name, season)
 
-            view = views.RivalsPlayerView(msg, data, name)
+            if data == False:
+                msg = await ctx.send("A megadott profil privát.")
+                return
+            if data is None:
+                msg = await ctx.send("Váratlan hiba történt.")
+                return
+
+            view = views.RivalsPlayerView(msg, data, name, season)
 
             await view.edit_message()
             await msg.edit(view=view)
