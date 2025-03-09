@@ -20,11 +20,17 @@ if config.lang == "hu":
 intents = discord.Intents.default()
 intents.messages = True 
 intents.message_content = True  
-bot = commands.Bot(command_prefix=config.command_prefix, intents=intents)
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
 }
+
+async def get_prefix(bot, message):
+    guild = message.guild
+    ensure_db_structure(str(guild.id))
+    return database[str(guild.id)]['prefix']
+
+bot = commands.Bot(command_prefix=get_prefix, intents=intents)
 
 ## Global variables
 database = None
@@ -134,7 +140,7 @@ def delete_all_files_in_folder():
 
 def ensure_db_structure(guild_id):
     if guild_id not in database:
-        database[guild_id] = {"music": None, "lol": None, "rivals": None}
+        database[guild_id] = {"music": None, "welcome": None, "lol": None, "rivals": None, "prefix" : config.default_command_prefix, "lang": config.default_lang, "timezone": "CET", "restricted_words": [], "welcome_msg": ""}
 
 def db_add_channel(guild_id, category, channel_id):
     ensure_db_structure(guild_id)  
@@ -393,59 +399,120 @@ async def clear(ctx, number=None):
 
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def set_music(ctx):
+async def set_channel(ctx, typ=None):
+    if typ is None:
+        msg = await ctx.send("A típus megadása kötelező.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
     msg = ""
-    if database[str(ctx.guild.id)]['music'] == None:
-        db_add_channel(str(ctx.guild.id), "music", ctx.channel.id)
-        save_database()
+    if typ == "music":
+        if database[str(ctx.guild.id)]['music'] == None:
+            db_add_channel(str(ctx.guild.id), "music", ctx.channel.id)
+            save_database()
 
-        msg = await ctx.send(f"A zene csatorna beállítva a következőre: {ctx.channel.mention}")
+            msg = await ctx.send(f"A zene csatorna beállítva a következőre: {ctx.channel.mention}")
+        else:
+            msg = await ctx.send("A zene csatorna már be van állítva.")
+    elif typ == "lol":
+        if database[str(ctx.guild.id)]['lol'] == None:
+            db_add_channel(str(ctx.guild.id), "lol", ctx.channel.id)
+            save_database()
+
+            msg = await ctx.send(f"A lol csatorna beállítva a következőre: {ctx.channel.mention}")
+    elif typ == "rivals":
+        if database[str(ctx.guild.id)]['rivals'] == None:
+            db_add_channel(str(ctx.guild.id), "rivals", ctx.channel.id)
+            save_database()
+
+            msg = await ctx.send(f"A rivals csatorna beállítva a következőre: {ctx.channel.mention}")
+        else:
+            msg = await ctx.send("A rivals csatorna már be van állítva.")
+    elif typ == "welcome":
+        if database[str(ctx.guild.id)]['welcome'] == None:
+            db_add_channel(str(ctx.guild.id), "welcome", ctx.channel.id)
+            save_database()
+
+            msg = await ctx.send(f"Az üdvözlő csatorna beállítva a következőre: {ctx.channel.mention}")
+        else:
+            msg = await ctx.send("Az üdvözlő csatorna már be van állítva.")
     else:
-        msg = await ctx.send("A zene csatorna már be van állítva.")
+        msg = await ctx.send("Hibás paraméter.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return
     await asyncio.sleep(2);
     await delete_message(ctx, msg)
 
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def clear_music(ctx):
+async def clear_channel(ctx, typ=None):
+    if typ is None:
+        msg = await ctx.send("A típus megadása kötelező.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
     msg = ""
-    if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['music'] == None:
-        msg = await ctx.send("A zene csatorna nincsen beállítva.")
-    else:
-        database[str(ctx.guild.id)]['music'] = None
-        save_database()
+    if typ == "music":
+        if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['music'] == None:
+            msg = await ctx.send("A zene csatorna nincsen beállítva.")
+        else:
+            database[str(ctx.guild.id)]['music'] = None
+            save_database()
 
-        msg = await ctx.send("A zene csatorna törölve.")
+            msg = await ctx.send("A zene csatorna törölve.")
+    elif typ == "lol":
+        if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['lol'] == None:
+            msg = await ctx.send("A lol csatorna nincsen beállítva.")
+        else:
+            database[str(ctx.guild.id)]['lol'] = None
+            save_database()
+
+            msg = await ctx.send("A lol csatorna törölve.")
+    elif typ == "rivals":
+        if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['rivals'] == None:
+            msg = await ctx.send("A rivals csatorna nincsen beállítva.")
+        else:
+            database[str(ctx.guild.id)]['rivals'] = None
+            save_database()
+
+            msg = await ctx.send("A rivals csatorna törölve.")
+    elif typ == "welcome":
+        if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['welcome'] == None:
+            msg = await ctx.send("Az üdvözlő csatorna nincsen beállítva.")
+        else:
+            database[str(ctx.guild.id)]['welcome'] = None
+            save_database()
+
+            msg = await ctx.send("Az üdvözlő csatorna törölve.")
+    else:
+        msg = await ctx.send("Hibás paraméter.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return
     await asyncio.sleep(2)
     await delete_message(ctx, msg)
 
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def set_rivals(ctx):
-    msg = ""
-    if database[str(ctx.guild.id)]['rivals'] == None:
-        db_add_channel(str(ctx.guild.id), "rivals", ctx.channel.id)
-        save_database()
+async def set_prefix(ctx, prefix=None):
+    if prefix is None:
+        msg = await ctx.send("A prefix megadása kötelező.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return
+    if len(prefix) > 1:
+        msg = await ctx.send("A prefix maximum 1 karakter lehet.")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+        return
 
-        msg = await ctx.send(f"A rivals csatorna beállítva a következőre: {ctx.channel.mention}")
-    else:
-        msg = await ctx.send("A rivals csatorna már be van állítva.")
-    await asyncio.sleep(2);
-    await delete_message(ctx, msg)
+    database[str(ctx.guild.id)]['prefix'] = prefix
+    save_database()
+    bot.command_prefix = prefix
 
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def clear_rivals(ctx):
-    msg = ""
-    if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['rivals'] == None:
-        msg = await ctx.send("A rivals csatorna nincsen beállítva.")
-    else:
-        database[str(ctx.guild.id)]['rivals'] = None
-        save_database()
-
-        msg = await ctx.send("A rivals csatorna törölve.")
+    msg = await ctx.send(f"A prefix beállítva a következőre: {prefix}")
     await asyncio.sleep(2)
     await delete_message(ctx, msg)
+
 
 @bot.event
 async def on_message(message):
@@ -472,3 +539,4 @@ try:
     bot.run(TOKEN)
 except Exception as e:
     print(f"Hiba történt: {e}")
+
