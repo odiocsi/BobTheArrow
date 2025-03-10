@@ -1,6 +1,6 @@
-#
+# BobTheArrow
 ## Desc
-A Discord bot that provides multiple functionalities, including musicplayer, game statistics retrieval(Marvel Rivals), moderation tools, database based configuration for each server, all of the mentioned functions can be disabled.
+A BobTheArrow is a discord bot that provides multiple functionalities, including musicplayer, game statistics retrieval(Marvel Rivals), moderation tools, database based configuration for each server, all of the mentioned functions can be disabled.
 
 ## Usage
 
