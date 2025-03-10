@@ -1,5 +1,7 @@
 import discord
+from discord.ext import commands
 from discord.ui import Button, View
+import config
 
 class MusicView(View):
     def __init__(self, ctx, msg, playlist):
@@ -66,7 +68,7 @@ class MusicView(View):
             else:
                 embed.add_field(name="Jelenlegi zene", value="N/A", inline=False)
 
-            embed.add_field(name="Lejásztási lista", value=f"{self.__playlist.tostring()}", inline=False)   
+            embed.add_field(name="Lejásztási lista", value=f"{self.__playlist.tostring()}", inline=False)
 
         self.__add_buttons()
         await self.__msg.edit(content=None, embed=embed, view=self)
@@ -89,7 +91,7 @@ class ChoosingView(View):
         async def callback(interaction: discord.Interaction):
             self.__resp.answer = i
             await interaction.response.defer()
-            await self.__msg.delete() 
+            await self.__msg.delete()
         return callback
 
     async def edit_message(self):
@@ -107,7 +109,7 @@ class RivalsPlayerView(View):
     def __init__(self, msg, data, name, season):
         super().__init__(timeout=None)
         self.__msg = msg
-        self.__data = data 
+        self.__data = data
         self.__name = name
         self.__season = season
 
@@ -116,10 +118,10 @@ class RivalsPlayerView(View):
         title = f"{string}{self.__calculate_spaces(string)}"
         embed = discord.Embed(title=title, color=0x800080)
 
-        embed.set_thumbnail(url=self.__data['heroes'][0]['img_url'])  
+        embed.set_thumbnail(url=self.__data['heroes'][0]['img_url'])
 
         embed.add_field(name="Rank", value=self.__data['rank'], inline=False)
-        
+
         embed.add_field(name="Győzelmi arány", value=f"{self.__data['winrate']}%", inline=False)
 
         heroes_data = ""
@@ -132,15 +134,15 @@ class RivalsPlayerView(View):
         await self.__msg.edit(content=None, embed=embed, view=self)
 
     def __calculate_spaces(self, title):
-        if (70-len(title)>0): 
+        if (70-len(title)>0):
             return (70-len(title))*" \u200b"
         return ""
-    
+
 class RivalsMapView(View):
     def __init__(self, msg, data, name, season):
         super().__init__(timeout=None)
         self.__msg = msg
-        self.__data = data 
+        self.__data = data
         self.__name = name
         self.__season = season
 
@@ -158,15 +160,15 @@ class RivalsMapView(View):
         await self.__msg.edit(content=None, embed=embed, view=self)
 
     def __calculate_spaces(self, title):
-        if (50-len(title)>0): 
+        if (50-len(title)>0):
             return (50-len(title))*" \u200b"
         return ""
-    
+
 class RivalsMatchupView(View):
     def __init__(self, msg, data, name, season, half):
         super().__init__(timeout=None)
         self.__msg = msg
-        self.__data = data 
+        self.__data = data
         self.__name = name
         self.__season = season
         self.__half = half
@@ -181,6 +183,7 @@ class RivalsMatchupView(View):
             for h in self.__data['heroes'][:24]:
                 map_data = f"Meccsek: {h['matches']}\nGyőzelmi arány: {h['winrate']}"
                 embed.add_field(name=h['name'].title(), value=map_data, inline=False)
+
 
         elif self.__half == 2:
             string = f"{self.__name} matchup statisztikái S{self.__season}"
@@ -198,6 +201,132 @@ class RivalsMatchupView(View):
         await self.__msg.edit(content=None, embed=embed, view=self)
 
     def __calculate_spaces(self, title):
-        if (50-len(title)>0): 
+        if (50-len(title)>0):
             return (50-len(title))*" \u200b"
         return ""
+
+class CustomHelpCommand(commands.HelpCommand):
+    async def send_bot_help(self, mapping):
+        help_embed = discord.Embed(
+            title="Bot Parancsok",
+            description="Az elérhető parancsok listája.",
+            color=0x00FF00
+        )
+
+        commands_info = {
+            "play": {
+                "description": "Zene lejátszása a csatornában.",
+                "usage": "<prefix>play <cím/link/playlist>",
+                "aliases": ["p"],
+                "enabled": config.musicplayer,
+            },
+            "league": {
+                "description": "League of Legends statisztikák lekérése",
+                "usage": "<prefix>league",
+                "aliases": ["lol"],
+                "enabled": config.lolapi,
+            },
+            "rivals": {
+                "description": "Marvel Rivals statisztikák lekérése",
+                "usage": "<prefix>rivals <név> <szezon(0,1,1.5 ...)/update> <típus(üres,map,matchup)>",
+                "aliases": ["rv"],
+                "enabled": config.rivalsapi,
+            },
+            "clear": {
+                "description": "Chat üzenetek törlése",
+                "usage": "<prefix>clear <üzenetszám>",
+                "aliases": ["cl"],
+                "enabled": config.clear,
+            },
+            "set_channel": {
+                "description": "Csatorna beállítása egy specifikus üzenethez.",
+                "usage": "<prefix>set_channel <típus(music,rivals,lol,welcome)>",
+                "aliases": ["sc"],
+                "enabled": config.musicplayer or config.rivalsapi or config.lolapi or config.welcome,
+            },
+            "clear_channel": {
+                "description": "Csatorna törlése egy specfikus üzenethez.",
+                "usage": "<prefix>clear_channel <típus(music,rivals,lol,welcome)>",
+                "aliases": ["cc"],
+                "enabled": config.musicplayer or config.rivalsapi or config.lolapi or config.welcome,
+            },
+            "set_prefix": {
+                "description": "Bot prefix beállítása.",
+                "usage": "<prefix>set_prefix <prefix>",
+                "aliases": ["sp"],
+                "enabled": config.prefixchange,
+            },
+            "set_welcome_msg": {
+                "description": "Üdvözlő üzenet beállítása.",
+                "usage": "<prefix>set_welcome_msg <üzenet>",
+                "aliases": ["swm"],
+                "enabled": config.welcome,
+            },
+            "set_welcome_rls": {
+                "description": "Csatlakozási rangok beállítása.",
+                "usage": "<prefix>set_welcome_rls <rangok>",
+                "aliases": ["swr"],
+                "enabled": config.welcome,
+            },
+            "system_message" : {
+                "description": "Rendszerüzenet küldése.",
+                "usage": "<prefix>system_message <cím> <üzenet>",
+                "aliases": ["sm"],
+                "enabled": config.systemmessage,
+            },
+            "add_restricted" : {
+                "description": "Tiltott szó hozzáadása.",
+                "usage": "<prefix>add_restricted <szavak>",
+                "aliases": ["ar"],
+                "enabled": config.moderation
+            },
+            "remove_restricted" : {
+                "description": "Tiltott szó törlése.",
+                "usage": "<prefix>remove_restricted <szavak>",
+                "aliases": ["rr"],
+                "enabled": config.moderation
+            },
+            "clear_restricted" : {
+                "description": "Tiltott szavak törlése.",
+                "usage": "<prefix>clear_restricted",
+                "aliases": ["cr"],
+                "enabled": config.moderation
+            }
+        }
+
+        command_info_list = []
+        embed_field = ""
+        for command, info in commands_info.items():
+            if info["enabled"]:
+                embed_field = f"**{command}**\n"
+                embed_field += f"Rövidítés: {', '.join(info['aliases'])}\n"
+                embed_field += f"Leírás: {info['description']}\n"
+                embed_field += f"Használat: {info['usage']}\n"
+
+                command_info_list.append(embed_field)
+
+
+        current_embed = None
+        char_count = 0
+        for command_info in command_info_list:
+            if current_embed is None:
+                current_embed = discord.Embed(
+                    title="Bot Parancsok",
+                    description="Az elérhető parancsok listája.",
+                    color=0x00FF00
+                )
+            if char_count + len(command_info) < 1024:
+                current_embed.add_field(name="_____", value=command_info, inline=False)
+                char_count += len(command_info)
+            else:
+                await self.context.send(embed=current_embed)
+                current_embed = discord.Embed(
+                    title="Bot Parancsok",
+                    description="Az elérhető parancsok listája.",
+                    color=0x00FF00
+                )
+                current_embed.add_field(name="_____", value=command_info, inline=False)
+                char_count = len(command_info)
+
+        if current_embed:
+            await self.context.send(embed=current_embed)
