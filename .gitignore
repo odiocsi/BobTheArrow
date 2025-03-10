@@ -1,6 +1,6 @@
 .env
-music/
-json/
+music/*
+json/database.json
 __pycache__/
 *.pyc
 *.pyo
