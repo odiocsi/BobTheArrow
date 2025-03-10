@@ -2,7 +2,6 @@ import requests
 import json
 import os
 from dotenv import load_dotenv
-from PIL import Image
 from io import BytesIO
 from datetime import datetime
 import pytz
