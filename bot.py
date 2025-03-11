@@ -92,7 +92,7 @@ async def choose_song_msg(ctx, response, view, playlist, search_results):
     await choose_view.edit_message()
 
     while response.answer == -1:
-        await asyncio.sleep(0.1) 
+        await asyncio.sleep(0.1)
 
     playlist.add(search_results['entries'][response.answer]['title'],  search_results['entries'][response.answer]['url'])
 
@@ -119,7 +119,7 @@ def play_next(ctx, view, playlist):
 
 async def update_view(view):
     while True:
-        time.sleep(1)        
+        time.sleep(0.5)
         await view.edit_message()
 
 
@@ -555,10 +555,10 @@ if config.welcome:
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
         else:
-            database[str(ctx.guild.id)]['welcome_msg'] = " ".join(message)
+            database[str(ctx.guild.id)]['welcome_msg'] = ' '.join(message)
             save_database()
 
-            msg = await ctx.send(f"{locale.welcome_message_set_to}{" ".join(message)}")
+            msg = await ctx.send(f"{locale.welcome_message_set_to}{' '.join(message)}")
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
 
@@ -579,7 +579,7 @@ if config.welcome:
             database[str(ctx.guild.id)]["welcome_rls"] = [role.id for role in roles]
             save_database()
 
-            role_mentions = ", ".join(role.mention for role in roles)
+            role_mentions = ' '.join(role.mention for role in roles)
             msg = await ctx.send(f"{locale.welcome_roles_set_to}{role_mentions}")
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
@@ -599,7 +599,7 @@ if config.moderation:
                 database[str(ctx.guild.id)]["restricted_words"].append(word)
             print(database[str(ctx.guild.id)]["restricted_words"])
             save_database()
-            msg = await ctx.send(f"{locale.restricted_words_added}{" ".join(words)}")
+            msg = await ctx.send(f"{locale.restricted_words_added}{' '.join(words)}")
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
 
@@ -616,7 +616,7 @@ if config.moderation:
             for word in words:
                 database[str(ctx.guild.id)]["restricted_words"].remove(word)
             save_database()
-            msg = await ctx.send(f"{locale.restricted_words_removed}{" ".join(words)}")
+            msg = await ctx.send(f"{locale.restricted_words_removed}{' '.join(words)}")
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
 
@@ -653,7 +653,7 @@ if config.systemmessage:
         embed = discord.Embed(title=f"{ctx.guild.name}")
 
         embed.set_thumbnail(url=ctx.guild.icon.url)
-        embed.add_field(name=title, value="".join(message), inline=False)
+        embed.add_field(name=title, value=''.join(message), inline=False)
         await msg.edit(content=None, embed=embed)
 
 if config.setlang:
