@@ -1,6 +1,11 @@
 # BobTheArrow
 ## Desc
-A BobTheArrow is a discord bot that provides multiple functionalities, including musicplayer, game statistics retrieval(Marvel Rivals), moderation tools, database based configuration for each server, all of the mentioned functions can be disabled.
+A BobTheArrow is a fully modular multi purpose discord bot.
+## Features
+- Music Player
+- Game statistics retrieval (Marvel Rivals, League of Legends)
+- Server moderation tools
+- Command based configuration for each server
 
 ## Usage
 
@@ -79,15 +84,15 @@ Configuration settings are stored in the `config.py` file
 2. Create a new application and navigate to the **Bot** section.
 3. Click **Add Bot**, configure its settings, and copy the **Bot Token**.
 4. Store the token securely in a `.env` file:
-   ```sh
-   DISCORD_BOT_TOKEN=your-bot-token-here
+   ```.env
+   DISCORD_TOKEN=your-bot-token-here
    ```
 
 #### Marvel Rivals API Key Setup:
 1. Go to [MarvelRivalsAPI.com](https://marvelrivalsapi.com) and sign up for an API key.
 2. Store the API key in the `.env` file:
-   ```sh
-   MARVEL_RIVALS_API_KEY=your-api-key-here
+   ```.env
+   RIVALS_API_KEY=your-api-key-here
    ```
 
 ### Running the bot
