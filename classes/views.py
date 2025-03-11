@@ -328,7 +328,7 @@ class CustomHelpCommand(commands.HelpCommand):
             },
             "set_language": {
                 "description": locale.set_language_desc,
-                "usage": f"<prefix>set_language {locale.set_language_usage}{str(languages.get_keys()).strip("[]'")})>",
+                "usage": f'<prefix>set_language {locale.set_language_usage}{str(languages.get_keys()).strip("[\\]'")}>',
                 "aliases": ["sl"],
                 "enabled": config.setlang,
             }
