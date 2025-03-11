@@ -9,12 +9,12 @@ import discord
 from discord.ext import commands
 
 import config
+from locales import languages
 from classes import api
 from classes import music
 from classes import views
 
-if config.default_lang == "hu":
-    from locales import hu as locale
+music_channel_not_set = "music_channel_not_set"
 
 ## Config
 intents = discord.Intents.default()
@@ -26,7 +26,9 @@ ffmpeg_options = {
     'options': '-vn'
 }
 
-
+def get_locale(guild_id):
+    lang = database[str(guild_id)]["lang"]
+    return languages.get_dict(lang)
 async def get_prefix(bot, message):
     guild = message.guild
     ensure_db_structure(str(guild.id))
@@ -65,12 +67,12 @@ async def find_existing_message(channel):
 
 async def get_server_playlist(ctx):
     if ctx.guild.id not in playlists:
-        playlists[ctx.guild.id] = music.Playlist() 
+        playlists[ctx.guild.id] = music.Playlist(get_locale(ctx.guild.id))
     return playlists[ctx.guild.id]
 
 async def get_server_view(ctx, msg):
     if ctx.guild.id not in message_views:
-        message_views[ctx.guild.id] = views.MusicView(ctx, msg, await get_server_playlist(ctx))
+        message_views[ctx.guild.id] = views.MusicView(ctx, msg, await get_server_playlist(ctx), ctx.guild)
     return message_views[ctx.guild.id]
 
 async def get_server_response(ctx):
@@ -79,13 +81,14 @@ async def get_server_response(ctx):
     return responses[ctx.guild.id]
 
 async def choose_song_msg(ctx, response, view, playlist, search_results):
+    locale =get_locale(ctx.guild.id)
     response.choosing = True
     msg = await ctx.send(locale.searching)
-    embed = discord.Embed(title="Találatok", color=0xFF0000)
-    embed.add_field(name="Státusz", value=locale.searching, inline=False)
+    embed = discord.Embed(title=locale.results, color=0xFF0000)
+    embed.add_field(name=locale.status, value=locale.searching, inline=False)
     await msg.edit(content=None, embed=embed)
 
-    choose_view = views.ChoosingView(msg, response, search_results)
+    choose_view = views.ChoosingView(msg, response, search_results, ctx.guild)
     await choose_view.edit_message()
 
     while response.answer == -1:
@@ -129,7 +132,7 @@ async def delete_message(ctx = None, msg = None, mgs = None):
         if msg is not None:
             await msg.delete()
     except:
-        print(locale.error_delete_msg)
+        print("the message deletion failed")
 
 def delete_all_files_in_folder():
     for filename in os.listdir(download_folder):
@@ -138,7 +141,7 @@ def delete_all_files_in_folder():
             try: 
                 os.remove(file_path)
             except:
-                print(locale.error_delete_file)
+                print("the file deletion failed")
 
 def ensure_db_structure(guild_id):
     if guild_id not in database:
@@ -154,50 +157,54 @@ def save_database():
         json.dump(database, db_json, indent=4)
 
 async def shutdown():
-    await bot.close() 
-    print(locale.stopped)
+    await bot.close()
+    print("the bot have stopped")
 
 def on_shutdown_signal():
     asyncio.create_task(shutdown())
 
 @bot.event
 async def on_ready():
-    print(locale.started)
+    print("the bot have started")
 
 ## Commands
-@bot.command()
-async def join(ctx):
-    if ctx.author.voice:
-        channel = ctx.author.voice.channel
-        await channel.connect()
-    else:
-        await ctx.send(locale.error_no_channel)
-
-@bot.command()
-async def leave(ctx):
-    if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-    else:
-        await ctx.send(locale.error_not_in_channel)
-
 if config.musicplayer:
+    @bot.command(name="join", aliases=["j"])
+    async def join(ctx):
+        locale =get_locale(ctx.guild.id)
+        if ctx.author.voice:
+            channel = ctx.author.voice.channel
+            await channel.connect()
+        else:
+            await ctx.send(locale.join_voice_first)
+
+    @bot.command(name="leave", aliases=["l"])
+    async def leave(ctx):
+        locale =get_locale(ctx.guild.id)
+        if ctx.voice_client:
+            await ctx.voice_client.disconnect()
+        else:
+            await ctx.send(locale.not_in_voice)
+
+
     @bot.command(name="play", aliases=["p"])
     async def play(ctx, *, query: str):
+        locale =get_locale(ctx.guild.id)
         if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['music'] == None:
-            msg = await ctx.send("Nincsen beállítva csatorna a zenelejátszóhoz.")
+            msg = await ctx.send(locale.music_channel_not_set)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
 
         if not database[str(ctx.guild.id)]['music'] == ctx.channel.id:
-            msg = await ctx.send("Ezt a parancsot itt nem használhatod.")
+            msg = await ctx.send(locale.cant_use_here)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
 
         response = await get_server_response(ctx)
         if response.choosing:
-            msg = await ctx.send("Először válaszd ki a zenét!")
+            msg = await ctx.send(locale.choose_song_first)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
@@ -211,7 +218,7 @@ if config.musicplayer:
                     mgs.append(msg)
                 await delete_message(ctx, None, mgs)
             else:
-                msg = await ctx.send("Először lépj be egy hangcsatornába!")
+                msg = await ctx.send(locale.join_voice_first)
                 await asyncio.sleep(2)
                 await delete_message(ctx, msg)
                 return
@@ -219,13 +226,13 @@ if config.musicplayer:
         result_type, search_results = mdown.search(query)
         if result_type == "link" :
             if search_results is None:
-                msg = await ctx.send("Érvénytelen hivatkozás.")
+                msg = await ctx.send(locale.wrong_link)
                 await asyncio.sleep(2)
                 await delete_message(ctx, msg)
                 return
         else:
             if not search_results['entries']:
-                msg = await ctx.send("Nem található zene a megadott kereséssel.")
+                msg = await ctx.send(locale.no_song_found)
                 await asyncio.sleep(2)
                 await delete_message(ctx, msg)
                 return
@@ -234,9 +241,9 @@ if config.musicplayer:
 
         msg = await find_existing_message(ctx)
         if not msg:
-            msg = await ctx.send("Betöltés...")
-            embed = discord.Embed(title="Zenelejátszó", color=0xFF0000)
-            embed.add_field(name="Státusz", value="Betöltés...", inline=False)
+            msg = await ctx.send(locale.loading)
+            embed = discord.Embed(title=locale.musicplayer, color=0xFF0000)
+            embed.add_field(name=locale.status, value=locale.loading, inline=False)
             await msg.edit(content=None, embed=embed)
         view = await get_server_view(ctx, msg)
         await msg.edit(view=view)
@@ -263,27 +270,29 @@ if config.musicplayer:
 if config.lolapi:
     @bot.command(name="league", aliases=["lol"])
     async def league(ctx):
-        msg = await ctx.send ("Nincs implementálva.")
+        locale =get_locale(ctx.guild.id)
+        msg = await ctx.send (locale.not_implemented)
         await asyncio.sleep(2)
         await delete_message(ctx, msg)
 
 if config.rivalsapi:
     @bot.command(name="rivals", aliases=["rv"])
     async def rivals(ctx, name=None, season=None, typ=None):
+        locale =get_locale(ctx.guild.id)
         if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['rivals'] == None:
-            msg = await ctx.send("Nincsen beállítva csatorna a rivals statisztikákhoz.")
+            msg = await ctx.send(locale.rivals_channel_not_set)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
 
         if not database[str(ctx.guild.id)]['rivals'] == ctx.channel.id:
-            msg = await ctx.send("Ezt a parancsot itt nem használhatod.")
+            msg = await ctx.send(locale.cant_use_here)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
 
         if name is None:
-            msg = await ctx.send("A név megadása kötelező.")
+            msg = await ctx.send(locale.name_required)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
@@ -292,13 +301,13 @@ if config.rivalsapi:
             if season is None:
                 season = "1.5"
             else:
-                msg = await ctx.send("Hibás 2. paraméter.")
+                msg = await ctx.send(locale.wrong_second_param)
                 await asyncio.sleep(2)
                 await delete_message(ctx, msg)
                 return
 
         if typ not in ["map", "matchup", None]:
-            msg = await ctx.send("Hibás 3. paraméter.")
+            msg = await ctx.send(locale.wrong_third_param)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
@@ -306,87 +315,86 @@ if config.rivalsapi:
 
         if typ == "map":
             msg = await ctx.send("...")
-            embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-            embed.add_field(name="Státusz", value="Betöltés...", inline=False)
+            embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+            embed.add_field(name=locale.status, value=locale.loading, inline=False)
             await msg.edit(content=None, embed=embed)
             data = rivals_api.get_map_data(name, season)
             if data == False:
-                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                embed.add_field(name="Státusz", value="A megadott profil privát", inline=False)
+                embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                embed.add_field(name=locale.status, value=locale.private_profile, inline=False)
                 await msg.edit(content=None, embed=embed)
                 return
             if data is None:
-                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                embed.add_field(name="Státusz", value="Váratlan hiba történt", inline=False)
+                embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                embed.add_field(name=locale.status, value=locale.unexpected_error, inline=False)
                 await msg.edit(content=None, embed=embed)
                 return
 
-            view = views.RivalsMapView(msg, data, name, season)
+            view = views.RivalsMapView(msg, data, name, season, ctx.guild)
             await view.edit_message()
             await msg.edit(view=view)
         elif typ == "matchup":
             msg = await ctx.send("...")
-            embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-            embed.add_field(name="Státusz", value="Betöltés...", inline=False)
+            embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+            embed.add_field(name=locale.status, value=locale.loading, inline=False)
             await msg.edit(content=None, embed=embed)
             data = rivals_api.get_matchup_data(name, season)
 
             if data == False:
-                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                embed.add_field(name="Státusz", value="A megadott profil privát", inline=False)
+                embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                embed.add_field(name=locale.status, value=locale.private_profile, inline=False)
                 await msg.edit(content=None, embed=embed)
                 return
             if data is None:
-                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                embed.add_field(name="Státusz", value="Váratlan hiba történt", inline=False)
+                embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                embed.add_field(name=locale.status, value=locale.unexpected_error, inline=False)
                 await msg.edit(content=None, embed=embed)
                 return
 
-            view = views.RivalsMatchupView(msg, data, name, season, 1)
+            view = views.RivalsMatchupView(msg, data, name, season, 1, ctx.guild)
             await view.edit_message()
             await msg.edit(view=view)
             if len(data['heroes']) > 24:
                 msg = await ctx.send("...")
-                view = views.RivalsMatchupView(msg, data, name, season, 2)
+                view = views.RivalsMatchupView(msg, data, name, season, 2, ctx.guild)
                 await view.edit_message()
                 await msg.edit(view=view)
         else:
             if season == "update":
                 msg = await ctx.send("...")
-                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                embed.add_field(name="Státusz", value="A profil frissítése megkezdödött", inline=False)
+                embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                embed.add_field(name=locale.status, value=locale.profile_update_started, inline=False)
                 await msg.edit(content=None, embed=embed)
                 data = rivals_api.get_player_data(name, season)
 
                 if data == False:
-                    embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                    embed.add_field(name="Státusz", value="A megadott profil privát", inline=False)
+                    embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                    embed.add_field(name=locale.status, value=locale.private_profile, inline=False)
                     await msg.edit(content=None, embed=embed)
                     return
                 if data is None:
-                    embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                    embed.add_field(name="Státusz", value="Váratlan hiba történt", inline=False)
+                    embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                    embed.add_field(name=locale.status, value=locale.unexpected_error, inline=False)
                     await msg.edit(content=None, embed=embed)
                     return
             else:
                 msg = await ctx.send("...")
-                embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                embed.add_field(name="Státusz", value="Betöltés...", inline=False)
+                embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                embed.add_field(name=locale.status, value=locale.loading, inline=False)
                 await msg.edit(content=None, embed=embed)
                 data = rivals_api.get_player_data(name, season)
-
                 if data == False:
-                    embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                    embed.add_field(name="Státusz", value="A megadott profil privát", inline=False)
+                    embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                    embed.add_field(name=locale.status, value=locale.private_profile, inline=False)
                     await msg.edit(content=None, embed=embed)
                     return
                 if data is None:
-                    embed = discord.Embed(title=f"{name} rangsorolt statisztikái", color=0x800080)
-                    embed.add_field(name="Státusz", value="Váratlan hiba történt", inline=False)
+                    embed = discord.Embed(title=f"{name}{locale.ranked_statistics}", color=0x800080)
+                    embed.add_field(name=locale.status, value=locale.unexpected_error, inline=False)
                     await msg.edit(content=None, embed=embed)
                     return
 
-                view = views.RivalsPlayerView(msg, data, name, season)
+                view = views.RivalsPlayerView(msg, data, name, season, ctx.guild)
 
                 await view.edit_message()
                 await msg.edit(view=view)
@@ -395,6 +403,7 @@ if config.clear:
     @bot.command(name="clear", aliases=["cl"])
     @commands.has_permissions(administrator=True)
     async def clear(ctx, number=None):
+        locale =get_locale(ctx.guild.id)
         mgs = []
         if number is None:
             number = 100
@@ -404,7 +413,7 @@ if config.clear:
             mgs.append(msg)
             counter += 1
         await delete_message(ctx, None, mgs)
-        msg = await ctx.send(f"{counter} üzenet törölve.")
+        msg = await ctx.send(f"{counter}{locale.message_deleted}")
         await asyncio.sleep(5)
         await delete_message(None, msg, None)
 
@@ -412,8 +421,9 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
     @bot.command(name="set_channel", aliases=["sc"])
     @commands.has_permissions(administrator=True)
     async def set_channel(ctx, typ=None):
+        locale =get_locale(ctx.guild.id)
         if typ is None:
-            msg = await ctx.send("A típus megadása kötelező.")
+            msg = await ctx.send(locale.type_required)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
         msg = ""
@@ -422,33 +432,35 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
                 db_add_channel(str(ctx.guild.id), "music", ctx.channel.id)
                 save_database()
 
-                msg = await ctx.send(f"A zene csatorna beállítva a következőre: {ctx.channel.mention}")
+                msg = await ctx.send(f"{locale.music_set_to}{ctx.channel.mention}")
             else:
-                msg = await ctx.send("A zene csatorna már be van állítva.")
+                msg = await ctx.send(locale.music_channel_already_set)
         elif typ == "lol"  and config.lolapi:
             if database[str(ctx.guild.id)]['lol'] == None:
                 db_add_channel(str(ctx.guild.id), "lol", ctx.channel.id)
                 save_database()
 
-                msg = await ctx.send(f"A lol csatorna beállítva a következőre: {ctx.channel.mention}")
+                msg = await ctx.send(f"{locale.lol_set_to}{ctx.channel.mention}")
+            else :
+                msg = await ctx.send(locale.lol_channel_already_set)
         elif typ == "rivals"  and config.rivalsapi:
             if database[str(ctx.guild.id)]['rivals'] == None:
                 db_add_channel(str(ctx.guild.id), "rivals", ctx.channel.id)
                 save_database()
 
-                msg = await ctx.send(f"A rivals csatorna beállítva a következőre: {ctx.channel.mention}")
+                msg = await ctx.send(f"{locale.rivals_set_to}{ctx.channel.mention}")
             else:
-                msg = await ctx.send("A rivals csatorna már be van állítva.")
+                msg = await ctx.send(locale.rivals_channel_already_set)
         elif typ == "welcome"  and config.welcome:
             if database[str(ctx.guild.id)]['welcome'] == None:
                 db_add_channel(str(ctx.guild.id), "welcome", ctx.channel.id)
                 save_database()
 
-                msg = await ctx.send(f"Az üdvözlő csatorna beállítva a következőre: {ctx.channel.mention}")
+                msg = await ctx.send(f"{locale.welcome_set_to}{ctx.channel.mention}")
             else:
-                msg = await ctx.send("Az üdvözlő csatorna már be van állítva.")
+                msg = await ctx.send(locale.welcome_channel_already_set)
         else:
-            msg = await ctx.send("Hibás paraméter.")
+            msg = await ctx.send(locale.wrong_first_param)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
@@ -458,45 +470,46 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
     @bot.command(name="clear_channel", aliases=["cc"])
     @commands.has_permissions(administrator=True)
     async def clear_channel(ctx, typ=None):
+        locale =get_locale(ctx.guild.id)
         if typ is None:
-            msg = await ctx.send("A típus megadása kötelező.")
+            msg = await ctx.send(locale.type_required)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
         msg = ""
         if typ == "music"  and config.musicplayer:
             if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['music'] == None:
-                msg = await ctx.send("A zene csatorna nincsen beállítva.")
+                msg = await ctx.send(locale.music_channel_not_set)
             else:
                 database[str(ctx.guild.id)]['music'] = None
                 save_database()
 
-                msg = await ctx.send("A zene csatorna törölve.")
+                msg = await ctx.send(locale.music_channel_deleted)
         elif typ == "lol"  and config.lolapi:
             if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['lol'] == None:
-                msg = await ctx.send("A lol csatorna nincsen beállítva.")
+                msg = await ctx.send(locale.lol_channel_not_set)
             else:
                 database[str(ctx.guild.id)]['lol'] = None
                 save_database()
 
-                msg = await ctx.send("A lol csatorna törölve.")
+                msg = await ctx.send(locale.lol_channel_deleted)
         elif typ == "rivals"  and config.rivalsapi:
             if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['rivals'] == None:
-                msg = await ctx.send("A rivals csatorna nincsen beállítva.")
+                msg = await ctx.send(locale.rivals_channel_not_set)
             else:
                 database[str(ctx.guild.id)]['rivals'] = None
                 save_database()
 
-                msg = await ctx.send("A rivals csatorna törölve.")
+                msg = await ctx.send(locale.rivals_channel_deleted)
         elif typ == "welcome"  and config.welcome:
             if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['welcome'] == None:
-                msg = await ctx.send("Az üdvözlő csatorna nincsen beállítva.")
+                msg = await ctx.send(locale.welcome_channel_not_set)
             else:
                 database[str(ctx.guild.id)]['welcome'] = None
                 save_database()
 
-                msg = await ctx.send("Az üdvözlő csatorna törölve.")
+                msg = await ctx.send(locale.welcome_channel_deleted)
         else:
-            msg = await ctx.send("Hibás paraméter.")
+            msg = await ctx.send(locale.wrong_first_param)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
@@ -507,13 +520,14 @@ if config.prefixchange:
     @bot.command(name="set_prefix", aliases=["sp"])
     @commands.has_permissions(administrator=True)
     async def set_prefix(ctx, prefix=None):
+        locale =get_locale(ctx.guild.id)
         if prefix is None:
-            msg = await ctx.send("A prefix megadása kötelező.")
+            msg = await ctx.send(locale.prefix_required)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
         if len(prefix) > 1:
-            msg = await ctx.send("A prefix maximum 1 karakter lehet.")
+            msg = await ctx.send(locale.prefix_max_char)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
@@ -522,7 +536,7 @@ if config.prefixchange:
         save_database()
         bot.command_prefix = prefix
 
-        msg = await ctx.send(f"A prefix beállítva a következőre: {prefix}")
+        msg = await ctx.send(f"{locale.prefix_set_to}{prefix}")
         await asyncio.sleep(2)
         await delete_message(ctx, msg)
 
@@ -530,41 +544,43 @@ if config.welcome:
     @bot.command(name="set_welcome_msg", aliases=["swm"])
     @commands.has_permissions(administrator=True)
     async def set_welcome_msg(ctx, *message : str):
+        locale =get_locale(ctx.guild.id)
         if not message:
-            msg = await ctx.send("Az üzenet megadása kötelező.")
+            msg = await ctx.send(locale.message_required)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
         if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['welcome'] == None:
-            msg = await ctx.send("Az üdvözlő csatorna nincsen beállítva.")
-            await asyncio.sleep(2);
+            msg = await ctx.send(locale.welcome_channel_not_set)
+            await asyncio.sleep(2)
             await delete_message(ctx, msg)
         else:
             database[str(ctx.guild.id)]['welcome_msg'] = " ".join(message)
             save_database()
 
-            msg = await ctx.send(f"Az üvözlő üzenet beállítva a következőre: {" ".join(message)}")
+            msg = await ctx.send(f"{locale.welcome_message_set_to}{" ".join(message)}")
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
 
     @bot.command(name="set_welcome_rls", aliases=["swr"])
     @commands.has_permissions(administrator=True)
     async def set_welcome_rls(ctx, *roles: discord.Role):
+        locale =get_locale(ctx.guild.id)
         if not roles:
-            msg = await ctx.send("Meg kell adnod legalább egy rangot.")
+            msg = await ctx.send(locale.rank_required)
             await asyncio.sleep(2)
             await msg.delete()
             return
         if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['welcome'] == None:
-            msg = await ctx.send("Az üdvözlő csatorna nincsen beállítva.")
-            await asyncio.sleep(2);
+            msg = await ctx.send(locale.welcome_channel_not_set)
+            await asyncio.sleep(2)
             await delete_message(ctx, msg)
         else:
             database[str(ctx.guild.id)]["welcome_rls"] = [role.id for role in roles]
             save_database()
 
             role_mentions = ", ".join(role.mention for role in roles)
-            msg = await ctx.send(f"Az üdvözlő szerepkörök beállítva: {role_mentions}")
+            msg = await ctx.send(f"{locale.welcome_roles_set_to}{role_mentions}")
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
 
@@ -572,8 +588,9 @@ if config.moderation:
     @bot.command(name="add_restricted", aliases=["ar"])
     @commands.has_permissions(administrator=True)
     async def add_restricted(ctx, *words: str):
+        locale =get_locale(ctx.guild.id)
         if not words:
-            msg = await ctx.send("Meg kell adnod legalább egy szót.")
+            msg = await ctx.send(locale.word_required)
             await asyncio.sleep(2)
             await msg.delete()
             return
@@ -582,15 +599,16 @@ if config.moderation:
                 database[str(ctx.guild.id)]["restricted_words"].append(word)
             print(database[str(ctx.guild.id)]["restricted_words"])
             save_database()
-            msg = await ctx.send(f"A következő szavak rákerültek a tiltólistára: {" ".join(words)}")
+            msg = await ctx.send(f"{locale.restricted_words_added}{" ".join(words)}")
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
 
     @bot.command(name="remove_restricted", aliases=["rs"])
     @commands.has_permissions(administrator=True)
     async def remove_restricted(ctx, *words: str):
+        locale =get_locale(ctx.guild.id)
         if not words:
-            msg = await ctx.send("Meg kell adnod legalább egy szót.")
+            msg = await ctx.send(locale.word_required)
             await asyncio.sleep(2)
             await msg.delete()
             return
@@ -598,7 +616,7 @@ if config.moderation:
             for word in words:
                 database[str(ctx.guild.id)]["restricted_words"].remove(word)
             save_database()
-            msg = await ctx.send(f"A következő szavak lekerültek a tiltólistáról: {" ".join(words)}")
+            msg = await ctx.send(f"{locale.restricted_words_removed}{" ".join(words)}")
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
 
@@ -606,9 +624,10 @@ if config.moderation:
     @bot.command(name="clear_restricted", aliases=["cr"])
     @commands.has_permissions(administrator=True)
     async def clear_restricted(ctx):
+        locale =get_locale(ctx.guild.id)
         database[str(ctx.guild.id)]["restricted_words"] = []
         save_database()
-        msg = await ctx.send(f"A tiltólista törölve lett.")
+        msg = await ctx.send(locale.restricted_words_cleared)
         await asyncio.sleep(2)
         await delete_message(ctx, msg)
 
@@ -616,29 +635,55 @@ if config.systemmessage:
     @bot.command(name="system_message", aliases=["sm"])
     @commands.has_permissions(administrator=True)
     async def system_message(ctx, title=None, *message : str):
+        locale =get_locale(ctx.guild.id)
         if title is None:
-            msg = await ctx.send("Meg kell adnod egy címet!")
+            msg = await ctx.send(locale.title_required)
             await asyncio.sleep(2)
             await delete_message(None, msg)
             return
         if not message:
-            msg = await ctx.send("Meg kell adnod egy üzenetet!")
+            msg = await ctx.send(locale.message_required)
             await asyncio.sleep(2)
             await delete_message(None, msg)
             return
 
         await delete_message(ctx)
 
-        msg = await ctx.send("Betöltés...")
+        msg = await ctx.send(locale.loading)
         embed = discord.Embed(title=f"{ctx.guild.name}")
 
         embed.set_thumbnail(url=ctx.guild.icon.url)
         embed.add_field(name=title, value="".join(message), inline=False)
         await msg.edit(content=None, embed=embed)
 
+if config.setlang:
+    @bot.command(name="set_language", aliases=["sl"])
+    @commands.has_permissions(administrator=True)
+    async def system_message(ctx, lang=None):
+        locale=get_locale(ctx.guild.id)
+        if lang is None:
+            msg = await ctx.send(locale.lang_required)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+        if not languages.key_exists(lang):
+            msg = await ctx.send(locale.wrong_lang)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        database[str(ctx.guild.id)]["lang"] = lang
+        save_database()
+
+        locale=get_locale(ctx.guild.id)
+        msg = await ctx.send(f"{locale.lang_set}{lang}")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+
 ## Events
 @bot.event
 async def on_message(message):
+    locale =get_locale(message.guild.id)
     if message.author == bot.user:
         return
 
@@ -650,7 +695,7 @@ async def on_message(message):
 
         if restricted:
             await message.delete()
-            msg = await message.channel.send(f"Az üzenet moderálva lett.")
+            msg = await message.channel.send(locale.message_moderated)
             await asyncio.sleep(2)
             await delete_message(None, msg)
 
@@ -659,7 +704,7 @@ async def on_message(message):
 @bot.event
 async def on_member_join(member):
     guild = member.guild
-
+    locale =get_locale(guild.id)
     if config.welcome:
         if str(guild.id) in database and database[str(guild.id) ]['welcome_rls'] != None:
             roles = [member.guild.get_role(role_id) for role_id in database[str(guild.id) ]["welcome_rls"]]
@@ -668,7 +713,7 @@ async def on_member_join(member):
                 try:
                     await member.add_roles(*roles)
                 except discord.Forbidden:
-                    msg = await member.guild.get_channel.send(f"Nincs joga a botnak a rang hozzáadásához!")
+                    msg = await member.guild.get_channel.send(locale.no_perm)
                     await asyncio.sleep(2)
                     await delete_message(None, msg)
 
@@ -688,14 +733,15 @@ async def on_guild_join(guild):
 
 ## Bot init
 load_dotenv()
-TOKEN = os.getenv("RIVALS_API_KEY")
-if TOKEN is None:
-    raise ValueError("Hiányzik a token.")
-rivals_api = api.RivalsAPI(TOKEN)
+if config.rivalsapi:
+    TOKEN = os.getenv("RIVALS_API_KEY")
+    if TOKEN is None:
+        raise ValueError("Rivals API Key not set.")
+    rivals_api = api.RivalsAPI(TOKEN)
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN is None:
-    raise ValueError("Hiányzik a token.")
+    raise ValueError("Discord API Token not set.")
 
 delete_all_files_in_folder()
 
@@ -703,5 +749,5 @@ try:
     signal.signal(signal.SIGINT, lambda signal, frame: on_shutdown_signal())
     bot.run(TOKEN)
 except Exception as e:
-    print(f"Hiba történt: {e}")
+    print(f"Error: {e}")
 

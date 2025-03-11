@@ -6,6 +6,8 @@ from io import BytesIO
 from datetime import datetime
 import pytz
 import certifi
+import config
+
 
 class RivalsAPI:
     def __init__(self, TOKEN):
@@ -64,10 +66,10 @@ class RivalsAPI:
 
                     return returndata
                 else:
-                    print(f"{response.status_code}, Üzenet: {response.text}")
+                    print(f"{response.status_code}, Error: {response.text}")
                     return None
         except requests.exceptions.RequestException as e:
-            print(f"A kérés nem sikerült: {e}")
+            print(f"Request failed: {e}")
             return None
 
     def get_map_data(self, name, season):
@@ -98,11 +100,11 @@ class RivalsAPI:
 
                 return returndata
             else:
-                print(f"{response.status_code}, Üzenet: {response.text}")
+                print(f"{response.status_code}, Error: {response.text}")
                 return None
             
         except requests.exceptions.RequestException as e:
-            print(f"A kérés nem sikerült: {e}")
+            print(f"Request failed: {e}")
             return None
 
     def get_matchup_data(self, name, season):
@@ -131,11 +133,11 @@ class RivalsAPI:
 
                 return returndata
             else:
-                print(f"{response.status_code}, Üzenet: {response.text}")
+                print(f"{response.status_code}, Error: {response.text}")
                 return None
             
         except requests.exceptions.RequestException as e:
-            print(f"A kérés nem sikerült: {e}")
+            print(f"Request failed: {e}")
             return None
 
     def __extract_hero_data(self, hero):

@@ -1,16 +1,26 @@
 import discord
 from discord.ext import commands
 from discord.ui import Button, View
+import json
 import config
+from locales import languages
 
+json_path = config.database_path
+with open(json_path, 'r') as db_json:
+    database = json.load(db_json)
+
+def get_locale(guild_id):
+    lang = database[str(guild_id)]["lang"]
+    return languages.get_dict(lang)
 class MusicView(View):
-    def __init__(self, ctx, msg, playlist):
+    def __init__(self, ctx, msg, playlist, guild):
         super().__init__(timeout=None)
         self.__ctx = ctx
         self.__msg = msg
         self.__isPaused = False
         self.__playlist = playlist
         self.__loopstatus = ""
+        self.__guild = guild
 
         self.__plpa_button = Button(style=discord.ButtonStyle.secondary, label="⏯️")
         self.__plpa_button.callback = self.__plpa
@@ -53,34 +63,36 @@ class MusicView(View):
         self.add_item(self.__loop_button)
 
     async def edit_message(self):
-        embed = discord.Embed(title="Zenelejátszó", color=0xFF0000)
+        locale = get_locale(self.__guild.id)
+        embed = discord.Embed(title=locale.musicplayer, color=0xFF0000)
 
         if self.__playlist.isEmpty() and not self.__ctx.voice_client.is_playing() and not self.__isPaused:
-           embed.add_field(name="Státusz", value="Jelenleg nem megy zene.", inline=False)
+           embed.add_field(name=locale.status, value="Jelenleg nem megy zene.", inline=False)
         else:
             if self.__isPaused:
-                embed.add_field(name="Státusz", value=f"⏸️{self.__loopstatus}", inline=False)
+                embed.add_field(name=locale.status, value=f"⏸️{self.__loopstatus}", inline=False)
             else:
-                embed.add_field(name="Státusz", value=f"▶️{self.__loopstatus}", inline=False)
+                embed.add_field(name=locale.status, value=f"▶️{self.__loopstatus}", inline=False)
 
             if self.__playlist.current:
-                embed.add_field(name="Jelenlegi zene", value=f"{self.__playlist.current['title']}", inline=False)
+                embed.add_field(name=locale.current_song, value=f"{self.__playlist.current['title']}", inline=False)
             else:
-                embed.add_field(name="Jelenlegi zene", value="N/A", inline=False)
+                embed.add_field(name=locale.current_song, value="N/A", inline=False)
 
-            embed.add_field(name="Lejásztási lista", value=f"{self.__playlist.tostring()}", inline=False)
+            embed.add_field(name=locale.playlist, value=f"{self.__playlist.tostring()}", inline=False)
 
         self.__add_buttons()
         await self.__msg.edit(content=None, embed=embed, view=self)
 
 
 class ChoosingView(View):
-    def __init__(self, msg, response, search_results):
+    def __init__(self, msg, response, search_results, guild):
         super().__init__(timeout=None)
         self.__msg = msg
         self.__resp = response
         self.__search_results = search_results
         self.__emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
+        self.__guild = guild
 
         for i in range(5):
             button = Button(style=discord.ButtonStyle.secondary, label=f"{self.__emojis[i]}")
@@ -95,41 +107,44 @@ class ChoosingView(View):
         return callback
 
     async def edit_message(self):
-        embed = discord.Embed(title="Találatok", color=0xFF0000)
+        locale = get_locale(self.__guild.id)
+        embed = discord.Embed(title=locale.results, color=0xFF0000)
 
         results = ""
         for i, item in enumerate(self.__search_results['entries']):
             results += f"{i+1}. {item['title']}\n"
 
-        embed.add_field(name="Válassz egy zenét a listából:", value=results, inline=False)
+        embed.add_field(name=locale.choose_a_song, value=results, inline=False)
 
         await self.__msg.edit(content=None, embed=embed, view=self)
 
 class RivalsPlayerView(View):
-    def __init__(self, msg, data, name, season):
+    def __init__(self, msg, data, name, season, guild):
         super().__init__(timeout=None)
         self.__msg = msg
         self.__data = data
         self.__name = name
         self.__season = season
+        self.__guild = guild
 
     async def edit_message(self):
-        string = f"{self.__name} rangsorolt statisztikái S{self.__season}"
+        locale = get_locale(self.__guild.id)
+        string = f"{self.__name}{locale.ranked_statistics} S{self.__season}"
         title = f"{string}{self.__calculate_spaces(string)}"
         embed = discord.Embed(title=title, color=0x800080)
 
         embed.set_thumbnail(url=self.__data['heroes'][0]['img_url'])
 
-        embed.add_field(name="Rank", value=self.__data['rank'], inline=False)
+        embed.add_field(name=locale.rank, value=self.__data['rank'], inline=False)
 
-        embed.add_field(name="Győzelmi arány", value=f"{self.__data['winrate']}%", inline=False)
+        embed.add_field(name=locale.winrate, value=f"{self.__data['winrate']}%", inline=False)
 
         heroes_data = ""
         for hero in self.__data['heroes']:
-            heroes_data += f"\n**{hero['name'].title()}**\nMeccsek: {hero['matches']}\nGyőzelmi arány: {hero['winrate']}%\nMVP/SVP: {hero['mvpsvp']}\nJátszott idő: {hero['playtime']} óra\n"
-        embed.add_field(name=f"Top {len(self.__data['heroes'])} hős", value=heroes_data, inline=False)
+            heroes_data += f"\n**{hero['name'].title()}**\n{locale.matches}: {hero['matches']}\n{locale.winrate}: {hero['winrate']}%\nMVP/SVP: {hero['mvpsvp']}\nJátszott idő: {hero['playtime']} óra\n"
+        embed.add_field(name=f"Top {len(self.__data['heroes'])}{locale.hero}", value=heroes_data, inline=False)
 
-        embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
+        embed.add_field(name=locale.last_updated, value=self.__data['update'], inline=False)
 
         await self.__msg.edit(content=None, embed=embed, view=self)
 
@@ -139,23 +154,25 @@ class RivalsPlayerView(View):
         return ""
 
 class RivalsMapView(View):
-    def __init__(self, msg, data, name, season):
+    def __init__(self, msg, data, name, season, guild):
         super().__init__(timeout=None)
         self.__msg = msg
         self.__data = data
         self.__name = name
         self.__season = season
+        self.__guild = guild
 
     async def edit_message(self):
-        string = f"{self.__name} pálya statisztikái S{self.__season}"
+        locale = get_locale(self.__guild.id)
+        string = f"{self.__name}{locale.map_statistics} S{self.__season}"
         title = f"{string}{self.__calculate_spaces(string)}"
         embed = discord.Embed(title=title, color=0x800080)
 
         for m in self.__data['maps']:
-            map_data = f"Meccsek: {m['matches']}\nGyőzelmi arány: {m['winrate']}"
+            map_data = f"{locale.matches}: {m['matches']}\n{locale.winrate}: {m['winrate']}"
             embed.add_field(name=m['name'], value=map_data, inline=False)
 
-        embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
+        embed.add_field(name=locale.last_updated, value=self.__data['update'], inline=False)
 
         await self.__msg.edit(content=None, embed=embed, view=self)
 
@@ -165,38 +182,40 @@ class RivalsMapView(View):
         return ""
 
 class RivalsMatchupView(View):
-    def __init__(self, msg, data, name, season, half):
+    def __init__(self, msg, data, name, season, half, guild):
         super().__init__(timeout=None)
         self.__msg = msg
         self.__data = data
         self.__name = name
         self.__season = season
         self.__half = half
+        self.__guild = guild
 
     async def edit_message(self):
+        locale = get_locale(self.__guild.id)
         embed = None
         if self.__half == 1:
-            string = f"{self.__name} matchup statisztikái S{self.__season}"
+            string = f"{self.__name}{locale.matchup_statistics} S{self.__season}"
             title = f"{string}{self.__calculate_spaces(string)}"
             embed = discord.Embed(title=title, color=0x800080)
 
             for h in self.__data['heroes'][:24]:
-                map_data = f"Meccsek: {h['matches']}\nGyőzelmi arány: {h['winrate']}"
+                map_data = f"{locale.matches}: {h['matches']}\n{locale.winrate}: {h['winrate']}"
                 embed.add_field(name=h['name'].title(), value=map_data, inline=False)
 
 
         elif self.__half == 2:
-            string = f"{self.__name} matchup statisztikái S{self.__season}"
+            string = f"{self.__name}{locale.matchup_statistics} S{self.__season}"
             title = f"{string}{self.__calculate_spaces(string)}"
             embed = discord.Embed(title=title, color=0x800080)
             for h in self.__data['heroes'][24:]:
-                map_data = f"Meccsek: {h['matches']}\nGyőzelmi arány: {h['winrate']}"
+                map_data = f"{locale.matches}: {h['matches']}\n{locale.winrate}: {h['winrate']}"
                 embed.add_field(name=h['name'].title(), value=map_data, inline=False)
 
         if len(self.__data['heroes']) < 25 and self.__half == 1:
-            embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
+            embed.add_field(name=locale.last_updated, value=self.__data['update'], inline=False)
         elif self.__half == 2:
-            embed.add_field(name="Utoljára frissítve", value=self.__data['update'], inline=False)
+            embed.add_field(name=locale.last_updated, value=self.__data['update'], inline=False)
 
         await self.__msg.edit(content=None, embed=embed, view=self)
 
@@ -207,90 +226,111 @@ class RivalsMatchupView(View):
 
 class CustomHelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
+        guild = self.context.guild
+        locale = get_locale(guild.id)
         help_embed = discord.Embed(
-            title="Bot Parancsok",
-            description="Az elérhető parancsok listája.",
+            title=locale.bot_commands,
+            description=locale.list_of_commands,
             color=0x00FF00
         )
 
+
         commands_info = {
+            "join": {
+                "description": locale.join_desc,
+                "usage": f"<prefix>join {locale.join_usage}",
+                "aliases": ["j"],
+                "enabled": config.musicplayer,
+            },
+            "leave": {
+                "description": locale.leave_desc,
+                "usage": f"<prefix>leave {locale.leave_usage}",
+                "aliases": ["l"],
+                "enabled": config.musicplayer,
+            },
             "play": {
-                "description": "Zene lejátszása a csatornában.",
-                "usage": "<prefix>play <cím/link/playlist>",
+                "description": locale.play_desc,
+                "usage": f"<prefix>play {locale.play_usage}",
                 "aliases": ["p"],
                 "enabled": config.musicplayer,
             },
             "league": {
-                "description": "League of Legends statisztikák lekérése",
-                "usage": "<prefix>league",
+                "description": locale.lol_desc,
+                "usage": f"<prefix>league {locale.lol_usage}",
                 "aliases": ["lol"],
                 "enabled": config.lolapi,
             },
             "rivals": {
-                "description": "Marvel Rivals statisztikák lekérése",
-                "usage": "<prefix>rivals <név> <szezon(0,1,1.5 ...)/update> <típus(üres,map,matchup)>",
+                "description": locale.rivals_desc,
+                "usage": f"<prefix>rivals {locale.rivals_usage}",
                 "aliases": ["rv"],
                 "enabled": config.rivalsapi,
             },
             "clear": {
-                "description": "Chat üzenetek törlése",
-                "usage": "<prefix>clear <üzenetszám>",
+                "description": locale.chat_desc,
+                "usage": f"<prefix>clear {locale.chat_usage}",
                 "aliases": ["cl"],
                 "enabled": config.clear,
             },
             "set_channel": {
-                "description": "Csatorna beállítása egy specifikus üzenethez.",
-                "usage": "<prefix>set_channel <típus(music,rivals,lol,welcome)>",
+                "description": locale.set_channel_desc,
+                "usage": f"<prefix>set_channel {locale.set_channel_usage}",
                 "aliases": ["sc"],
                 "enabled": config.musicplayer or config.rivalsapi or config.lolapi or config.welcome,
             },
             "clear_channel": {
-                "description": "Csatorna törlése egy specfikus üzenethez.",
-                "usage": "<prefix>clear_channel <típus(music,rivals,lol,welcome)>",
+                "description": locale.clear_channel_desc,
+                "usage": f"<prefix>clear_channel {locale.clear_channel_usage}",
                 "aliases": ["cc"],
                 "enabled": config.musicplayer or config.rivalsapi or config.lolapi or config.welcome,
             },
             "set_prefix": {
-                "description": "Bot prefix beállítása.",
-                "usage": "<prefix>set_prefix <prefix>",
+                "description": locale.set_prefix_desc,
+                "usage": f"<prefix>set_prefix {locale.set_prefix_usage}",
                 "aliases": ["sp"],
                 "enabled": config.prefixchange,
             },
             "set_welcome_msg": {
-                "description": "Üdvözlő üzenet beállítása.",
-                "usage": "<prefix>set_welcome_msg <üzenet>",
+                "description": locale.set_welcome_msg_desc,
+                "usage": f"<prefix>set_welcome_msg {locale.set_welcome_msg_usage}",
                 "aliases": ["swm"],
                 "enabled": config.welcome,
             },
             "set_welcome_rls": {
-                "description": "Csatlakozási rangok beállítása.",
-                "usage": "<prefix>set_welcome_rls <rangok>",
+                "description": locale.set_welcome_rls_desc,
+                "usage": f"<prefix>set_welcome_rls {locale.set_welcome_rls_usage}",
                 "aliases": ["swr"],
                 "enabled": config.welcome,
             },
-            "system_message" : {
-                "description": "Rendszerüzenet küldése.",
-                "usage": "<prefix>system_message <cím> <üzenet>",
+            "system_message": {
+                "description": locale.system_message_desc,
+                "usage": f"<prefix>system_message {locale.system_message_usage}",
                 "aliases": ["sm"],
                 "enabled": config.systemmessage,
             },
-            "add_restricted" : {
-                "description": "Tiltott szó hozzáadása.",
-                "usage": "<prefix>add_restricted <szavak>",
+            "add_restricted": {
+                "description": locale.add_restricted_desc,
+                "usage": f"<prefix>add_restricted {locale.add_restricted_usage}",
                 "aliases": ["ar"],
-                "enabled": config.moderation
+                "enabled": config.moderation,
             },
-            "remove_restricted" : {
-                "description": "Tiltott szó törlése.",
-                "usage": "<prefix>remove_restricted <szavak>",
+            "remove_restricted": {
+                "description": locale.remove_restricted_desc,
+                "usage": f"<prefix>remove_restricted {locale.remove_restricted_usage}",
                 "aliases": ["rr"],
-                "enabled": config.moderation
+                "enabled": config.moderation,
             },
-            "clear_restricted" : {
-                "description": "Tiltott szavak törlése.",
-                "usage": "<prefix>clear_restricted",
+            "clear_restricted": {
+                "description": locale.clear_restricted_desc,
+                "usage": f"<prefix>clear_restricted {locale.clear_restricted_usage}",
                 "aliases": ["cr"],
-                "enabled": config.moderation
+                "enabled": config.moderation,
+            },
+            "set_language": {
+                "description": locale.set_language_desc,
+                "usage": f"<prefix>set_language {locale.set_language_usage}{str(languages.get_keys()).strip("[]'")})>",
+                "aliases": ["sl"],
+                "enabled": config.setlang,
             }
         }
 
@@ -299,9 +339,9 @@ class CustomHelpCommand(commands.HelpCommand):
         for command, info in commands_info.items():
             if info["enabled"]:
                 embed_field = f"**{command}**\n"
-                embed_field += f"Rövidítés: {', '.join(info['aliases'])}\n"
-                embed_field += f"Leírás: {info['description']}\n"
-                embed_field += f"Használat: {info['usage']}\n"
+                embed_field += f"{locale.alias}{', '.join(info['aliases'])}\n"
+                embed_field += f"{locale.description}{info['description']}\n"
+                embed_field += f"{locale.usage}{info['usage']}\n"
 
                 command_info_list.append(embed_field)
 
@@ -311,8 +351,8 @@ class CustomHelpCommand(commands.HelpCommand):
         for command_info in command_info_list:
             if current_embed is None:
                 current_embed = discord.Embed(
-                    title="Bot Parancsok",
-                    description="Az elérhető parancsok listája.",
+                    title=locale.bot_commands,
+                    description=locale.list_of_commands,
                     color=0x00FF00
                 )
             if char_count + len(command_info) < 1024:
@@ -321,8 +361,8 @@ class CustomHelpCommand(commands.HelpCommand):
             else:
                 await self.context.send(embed=current_embed)
                 current_embed = discord.Embed(
-                    title="Bot Parancsok",
-                    description="Az elérhető parancsok listája.",
+                    title=locale.bot_commands,
+                    description=locale.list_of_commands,
                     color=0x00FF00
                 )
                 current_embed.add_field(name="_____", value=command_info, inline=False)

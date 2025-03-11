@@ -1,6 +1,7 @@
 from yt_dlp import YoutubeDL
 import random
 import re
+import config
 
 ## Config
 download_folder = "music"
@@ -18,6 +19,7 @@ download_opts = {
     'noplaylist': False,
     'outtmpl': f'{download_folder}/%(title)s.%(ext)s',
 }
+
 
 ## Downloader class
 class MusicDownloader:
@@ -57,7 +59,8 @@ class MusicDownloader:
     
 ## Playlist class
 class Playlist:
-    def __init__(self):
+    def __init__(self, locale):
+        self.__locale = locale
         self.__playlist = []
         self.__index = 0
         self.__loop = "no"
@@ -129,5 +132,5 @@ class Playlist:
                     string += f"{i+1}. {item['title']}\n"
             return string
         else:
-            return  "Nincsen zene a lejátszási listában"
+            return  self.__locale.no_song_in_playlist
 
