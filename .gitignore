@@ -1,5 +1,6 @@
 .env
 music/*
+!music/.gitkeep
 json/database.json
 __pycache__/
 *.pyc
