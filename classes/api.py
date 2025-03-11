@@ -90,7 +90,7 @@ class RivalsAPI:
                     'update': self.__get_time(data['updates']['last_history_update']),
                     'maps': [
                         {
-                            'name': f"{self.__map_names.get(m['map_id'], "Unknown")}",
+                            'name': f"{self.__map_names.get(m['map_id'], 'Unknown')}",
                             'matches': m['matches'],
                             'winrate': f"{m['wins'] / m['matches'] * 100:.2f}" if m['matches'] > 0 else "0.00",
                         }
