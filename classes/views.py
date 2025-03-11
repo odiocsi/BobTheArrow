@@ -234,7 +234,7 @@ class CustomHelpCommand(commands.HelpCommand):
             color=0x00FF00
         )
 
-
+        lang_options = str(languages.get_keys()).strip("[\\]'")
         commands_info = {
             "join": {
                 "description": locale.join_desc,
@@ -328,7 +328,7 @@ class CustomHelpCommand(commands.HelpCommand):
             },
             "set_language": {
                 "description": locale.set_language_desc,
-                "usage": f'<prefix>set_language {locale.set_language_usage}{str(languages.get_keys()).strip("[\\]'")}>',
+                "usage": f'<prefix>set_language {locale.set_language_usage}{lang_options}>',
                 "aliases": ["sl"],
                 "enabled": config.setlang,
             }
