@@ -29,23 +29,23 @@ class MusicDownloader:
         if not cls.__instance:
             cls.__instance = super(MusicDownloader, cls).__new__(cls)
         return cls.__instance
-    
+
     def search(self, query, max_results=5):
         with YoutubeDL(search_opts) as ydl:
             if self.__is_url(query):
                 try:
                     info = ydl.extract_info(query, download=False)
-                    
-                    if 'entries' in info: 
+
+                    if 'entries' in info:
                         return ["playlist", info]
-                    else: 
+                    else:
                         return ["link", info]
                 except:
                     return ["link", None]
             else:
                 search_result = ydl.extract_info(f'ytsearch{max_results}:{query}', download=False)
                 return ["keyword", search_result]
-    
+
     def download(self, url):
         with YoutubeDL(download_opts) as ydl:
             info = ydl.extract_info(url, download=True)
@@ -56,7 +56,7 @@ class MusicDownloader:
     def __is_url(query):
         url_pattern = re.compile(r'^(https?://)')
         return bool(url_pattern.match(query))
-    
+
 ## Playlist class
 class Playlist:
     def __init__(self, locale):
@@ -66,9 +66,12 @@ class Playlist:
         self.__loop = "no"
         self.current = []
 
+    def getLoop(self):
+        return self.__loop
+    
     def add(self, title, url):
         self.__playlist.append({'title': title, 'url': url})
-    
+
     def clear(self):
         self.__playlist = []
 
@@ -91,7 +94,7 @@ class Playlist:
             self.__loop = "no"
             return ""
 
-    def isEmpty(self):  
+    def isEmpty(self):
         return len(self.__playlist) == 0
 
     def shuffle(self):
@@ -111,7 +114,7 @@ class Playlist:
                 if (self.current in self.__playlist):
                     self.__playlist.remove(self.current)
                 self.__index = 0
-            else: 
+            else:
                 self.__index = 0
                 self.current = self.__playlist.pop(0)
 

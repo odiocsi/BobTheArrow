@@ -57,9 +57,9 @@ class MusicView(View):
     def __add_buttons(self):
         self.clear_items()
         self.add_item(self.__plpa_button)
+        self.add_item(self.__skip_button)
         if not self.__playlist.isEmpty():
             self.add_item(self.__shuff_button)
-            self.add_item(self.__skip_button)
         self.add_item(self.__loop_button)
 
     async def edit_message(self):

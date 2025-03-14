@@ -18,8 +18,8 @@ music_channel_not_set = "music_channel_not_set"
 
 ## Config
 intents = discord.Intents.default()
-intents.messages = True 
-intents.message_content = True  
+intents.messages = True
+intents.message_content = True
 intents.members = True
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
@@ -51,7 +51,7 @@ if not os.path.exists(json_path) or os.path.getsize(json_path) == 0:
     database = {}
 else:
     with open(json_path, 'r') as db_json:
-        database = json.load(db_json) 
+        database = json.load(db_json)
 
 ## Util
 class Response():
@@ -62,7 +62,7 @@ class Response():
 async def find_existing_message(channel):
     async for msg in channel.history(limit=50):
         if msg.author == channel.guild.me and msg.components:
-            return msg 
+            return msg
     return None
 
 async def get_server_playlist(ctx):
@@ -107,9 +107,9 @@ async def choose_song_msg(ctx, response, view, playlist, search_results):
 def play_next(ctx, view, playlist):
     ctx.voice_client.stop()
 
-    if playlist.isEmpty():
+    if playlist.isEmpty() and not playlist.getLoop() == "one":
         return
-    
+
     playlist.next()
     url = playlist.current['url']
     audio_file = mdown.download(url)
@@ -124,7 +124,7 @@ async def update_view(view):
 
 
 async def delete_message(ctx = None, msg = None, mgs = None):
-    try: 
+    try:
         if ctx is not None:
             await ctx.message.delete()
             if mgs is not None:
@@ -138,7 +138,7 @@ def delete_all_files_in_folder():
     for filename in os.listdir(download_folder):
         file_path = os.path.join(download_folder, filename)
         if os.path.isfile(file_path):
-            try: 
+            try:
                 os.remove(file_path)
             except:
                 print("the file deletion failed")
@@ -148,8 +148,8 @@ def ensure_db_structure(guild_id):
         database[guild_id] = {"music": None, "welcome": None, "lol": None, "rivals": None, "prefix" : config.default_command_prefix, "lang": config.default_lang, "timezone": "CET", "restricted_words": [], "welcome_msg": "", "welcome_rls" : []}
 
 def db_add_channel(guild_id, category, channel_id):
-    ensure_db_structure(guild_id)  
-    if category in database[guild_id]:  
+    ensure_db_structure(guild_id)
+    if category in database[guild_id]:
         database[guild_id][category] = channel_id
 
 def save_database():
