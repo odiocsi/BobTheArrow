@@ -1,6 +1,6 @@
 # BobTheArrow
 ## Desc
-A BobTheArrow is a fully modular multi purpose discord bot.
+BobTheArrow is a fully modular multi purpose discord bot.
 ## Features
 - Music Player
 - Game statistics retrieval (Marvel Rivals, League of Legends)
