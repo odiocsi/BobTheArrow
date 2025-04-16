@@ -10,7 +10,7 @@ from discord.ext import commands
 
 import config
 from locales import languages
-from classes import api
+from classes.apis import marvelrivals
 from classes import music
 from classes import views
 
@@ -81,16 +81,18 @@ async def get_server_response(ctx):
     return responses[ctx.guild.id]
 
 async def choose_song_msg(ctx, response, view, playlist, search_results):
-    locale =get_locale(ctx.guild.id)
-    response.choosing = True
+    locale = get_locale(ctx.guild.id)
     msg = await ctx.send(locale.searching)
     embed = discord.Embed(title=locale.results, color=0xFF0000)
     embed.add_field(name=locale.status, value=locale.searching, inline=False)
+    await asyncio.sleep(0.51)
     await msg.edit(content=None, embed=embed)
+    response.choosing = True
 
     choose_view = views.ChoosingView(msg, response, search_results, ctx.guild)
     await choose_view.edit_message()
 
+    await choose_song_automatically(response)
     while response.answer == -1:
         await asyncio.sleep(0.1)
 
@@ -99,10 +101,15 @@ async def choose_song_msg(ctx, response, view, playlist, search_results):
     response.choosing = False
     response.answer = -1
 
+    await delete_message(None, msg)
     if not ctx.voice_client.is_playing():
         play_next(ctx, view, playlist)
-    await asyncio.sleep(1)
 
+async def choose_song_automatically(response):
+    await asyncio.sleep(10)
+    if response.choosing:
+        response.choosing = False
+        response.answer = 0
 
 def play_next(ctx, view, playlist):
     ctx.voice_client.stop()
@@ -204,10 +211,8 @@ if config.musicplayer:
 
         response = await get_server_response(ctx)
         if response.choosing:
-            msg = await ctx.send(locale.choose_song_first)
-            await asyncio.sleep(2)
-            await delete_message(ctx, msg)
-            return
+            responses[ctx.guild.id].answer = 0
+            responses[ctx.guild.id].choosing = False
 
         if ctx.voice_client is None:
             if ctx.author.voice:
@@ -737,7 +742,7 @@ if config.rivalsapi:
     TOKEN = os.getenv("RIVALS_API_KEY")
     if TOKEN is None:
         raise ValueError("Rivals API Key not set.")
-    rivals_api = api.RivalsAPI(TOKEN)
+    rivals_api = marvelrivals.RivalsAPI(TOKEN)
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN is None:
