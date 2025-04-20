@@ -119,7 +119,7 @@ class HuLocale:
         self.set_welcome_rls_usage = "<rangok>"
 
         self.system_message_desc = "Rendszerüzenet küldése."
-        self.system_message_usage = "<cím> <üzenet>"
+        self.system_message_usage = "<cím> <üzenet> (többsoroshoz: \\n)"
 
         self.add_restricted_desc = "Tiltott szó hozzáadása."
         self.add_restricted_usage = "<szavak>"
@@ -259,7 +259,7 @@ class EnLocale:
         self.set_welcome_rls_usage = "<roles>"
 
         self.system_message_desc = "Send system message."
-        self.system_message_usage = "<title> <message>"
+        self.system_message_usage = "<title> <message> (for multiline: \\n)"
 
         self.add_restricted_desc = "Add a restricted word."
         self.add_restricted_usage = "<words>"
