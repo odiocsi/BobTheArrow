@@ -126,7 +126,7 @@ def play_next(ctx, view, playlist):
 
 async def update_view(view):
     while True:
-        time.sleep(0.5)
+        time.sleep(1)
         await view.edit_message()
 
 
@@ -658,7 +658,7 @@ if config.systemmessage:
         embed = discord.Embed(title=f"{ctx.guild.name}")
 
         embed.set_thumbnail(url=ctx.guild.icon.url)
-        embed.add_field(name=title, value=''.join(message), inline=False)
+        embed.add_field(name=title, value=' '.join(message).replace('\\n', '\n'), inline=False)
         await msg.edit(content=None, embed=embed)
 
 if config.setlang:
