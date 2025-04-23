@@ -27,6 +27,7 @@ ffmpeg_options = {
 }
 
 def get_locale(guild_id):
+    ensure_db_structure(str(guild_id))
     lang = database[str(guild_id)]["lang"]
     return languages.get_dict(lang)
 async def get_prefix(bot, message):
