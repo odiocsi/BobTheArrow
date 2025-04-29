@@ -27,7 +27,6 @@ ffmpeg_options = {
 }
 
 def get_locale(guild_id):
-    ensure_db_structure(str(guild_id))
     lang = database[str(guild_id)]["lang"]
     return languages.get_dict(lang)
 async def get_prefix(bot, message):
@@ -689,6 +688,7 @@ if config.setlang:
 ## Events
 @bot.event
 async def on_message(message):
+    ensure_db_structure(message.guild_id)
     locale =get_locale(message.guild.id)
     if message.author == bot.user:
         return
@@ -710,6 +710,7 @@ async def on_message(message):
 @bot.event
 async def on_member_join(member):
     guild = member.guild
+    ensure_db_structure(guild_id)
     locale =get_locale(guild.id)
     if config.welcome:
         if str(guild.id) in database and database[str(guild.id) ]['welcome_rls'] != None:
