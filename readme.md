@@ -54,7 +54,7 @@ source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 #### Python packages:
 Once inside the virtual environment, install the required Python packages using `pip`:
 ```sh/cmd
-pip install discord python-dotenv requests pytz certifi yt-dlp
+pip install discord python-dotenv requests pytz certifi yt-dlp PyNaCl
 ```
 
 ### Config
