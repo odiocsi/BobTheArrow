@@ -1,6 +1,6 @@
 
 #DB Defaults
-default_lang = "hu" #hu/en
+default_lang = "en" #hu/en
 default_command_prefix = "."
 
 #Folders
@@ -11,7 +11,7 @@ database_path = 'json/database.json'
 setlang = True
 musicplayer = True
 rivalsapi = True
-lolapi = False
+lolapi = False #not yet implemented
 moderation = True
 welcome = True
 clear = True
