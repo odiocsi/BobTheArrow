@@ -151,6 +151,7 @@ def delete_all_files_in_folder():
                 print("the file deletion failed")
 
 def ensure_db_structure(guild_id):
+    guild_id = str(guild_id)
     if guild_id not in database:
         database[guild_id] = {"music": None, "welcome": None, "lol": None, "rivals": None, "prefix" : config.default_command_prefix, "lang": config.default_lang, "timezone": "CET", "restricted_words": [], "welcome_msg": "", "welcome_rls" : []}
 
