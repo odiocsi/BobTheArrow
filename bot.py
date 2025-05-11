@@ -13,6 +13,7 @@ from locales import languages
 from classes.apis import marvelrivals
 from classes import music
 from classes import views
+from classes.shared import database, json_path
 
 music_channel_not_set = "music_channel_not_set"
 
@@ -29,6 +30,7 @@ ffmpeg_options = {
 def get_locale(guild_id):
     lang = database[str(guild_id)]["lang"]
     return languages.get_dict(lang)
+
 async def get_prefix(bot, message):
     guild = message.guild
     ensure_db_structure(str(guild.id))
@@ -37,21 +39,12 @@ async def get_prefix(bot, message):
 bot = commands.Bot(command_prefix=get_prefix, intents=intents, help_command=views.CustomHelpCommand())
 
 ## Global variables
-database = None
 mdown = music.MusicDownloader()
 playlists = {}
 message_views = {}
 responses = {}
 download_folder = config.download_path
 awaited_delete = False
-
-## Db
-json_path = config.database_path
-if not os.path.exists(json_path) or os.path.getsize(json_path) == 0:
-    database = {}
-else:
-    with open(json_path, 'r') as db_json:
-        database = json.load(db_json)
 
 ## Util
 class Response():
@@ -151,14 +144,14 @@ def delete_all_files_in_folder():
                 print("the file deletion failed")
 
 def ensure_db_structure(guild_id):
-    guild_id = str(guild_id)
-    if guild_id not in database:
-        database[guild_id] = {"music": None, "welcome": None, "lol": None, "rivals": None, "prefix" : config.default_command_prefix, "lang": config.default_lang, "timezone": "CET", "restricted_words": [], "welcome_msg": "", "welcome_rls" : []}
+    if str(guild_id) not in database:
+        database[str(guild_id)] = {"music": None, "welcome": None, "lol": None, "rivals": None, "prefix" : config.default_command_prefix, "lang": config.default_lang, "timezone": "CET", "restricted_words": [], "welcome_msg": "", "welcome_rls" : []}
 
 def db_add_channel(guild_id, category, channel_id):
     ensure_db_structure(guild_id)
-    if category in database[guild_id]:
-        database[guild_id][category] = channel_id
+    if category in database[str(guild_id)]:
+        database[str(guild_id)][category] = channel_id
+    save_database()
 
 def save_database():
     with open(json_path, 'w') as db_json:
@@ -603,7 +596,6 @@ if config.moderation:
         else:
             for word in words:
                 database[str(ctx.guild.id)]["restricted_words"].append(word)
-            print(database[str(ctx.guild.id)]["restricted_words"])
             save_database()
             msg = await ctx.send(f"{locale.restricted_words_added}{' '.join(words)}")
             await asyncio.sleep(2)
@@ -689,7 +681,7 @@ if config.setlang:
 ## Events
 @bot.event
 async def on_message(message):
-    ensure_db_structure(message.guild_id)
+    ensure_db_structure(message.guild.id)
     locale =get_locale(message.guild.id)
     if message.author == bot.user:
         return

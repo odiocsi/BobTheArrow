@@ -4,10 +4,7 @@ from discord.ui import Button, View
 import json
 import config
 from locales import languages
-
-json_path = config.database_path
-with open(json_path, 'r') as db_json:
-    database = json.load(db_json)
+from classes.shared import database, json_path
 
 def get_locale(guild_id):
     lang = database[str(guild_id)]["lang"]
