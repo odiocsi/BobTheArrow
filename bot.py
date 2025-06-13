@@ -297,9 +297,9 @@ if config.rivalsapi:
             await delete_message(ctx, msg)
             return
 
-        if season not in ["0", "1", "1.5", "2", "update"]:
+        if season not in (config.seasons + ["update"]):
             if season is None:
-                season = "2"
+                season = config.seasons[-1]
             else:
                 msg = await ctx.send(locale.wrong_second_param)
                 await asyncio.sleep(2)

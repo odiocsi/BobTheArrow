@@ -17,3 +17,6 @@ welcome = True
 clear = True
 prefixchange = True
 systemmessage = True
+
+#RivalsAPI
+seasons = ["0", "1", "1.5", "2", "2.5"] #the last is always the default
