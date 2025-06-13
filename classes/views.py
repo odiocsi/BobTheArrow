@@ -140,16 +140,19 @@ class RivalsPlayerView(View):
         title = f"{string}{self.__calculate_spaces(string)}"
         embed = discord.Embed(title=title, color=0x800080)
 
-        embed.set_thumbnail(url=self.__data['heroes'][0]['img_url'])
+        if (len(self.__data["heroes"])>0):
+            embed.set_thumbnail(url=self.__data['heroes'][0]['img_url'])
 
         embed.add_field(name=locale.rank, value=self.__data['rank'], inline=False)
 
-        embed.add_field(name=locale.winrate, value=f"{self.__data['winrate']}%", inline=False)
+        embed.add_field(name=locale.winrate, value=f"{self.__data['winrate']}", inline=False)
 
         heroes_data = ""
         for hero in self.__data['heroes']:
             heroes_data += f"\n**{hero['name'].title()}**\n{locale.matches}: {hero['matches']}\n{locale.winrate}: {hero['winrate']}%\nMVP/SVP: {hero['mvpsvp']}\nJátszott idő: {hero['playtime']} óra\n"
-        embed.add_field(name=f"Top {len(self.__data['heroes'])}{locale.hero}", value=heroes_data, inline=False)
+        if (len(self.__data["heroes"]) == 0):
+            heroes_data += "N/A"
+        embed.add_field(name=f"Top {locale.hero}", value=heroes_data, inline=False)
 
         embed.add_field(name=locale.last_updated, value=self.__data['update'], inline=False)
 

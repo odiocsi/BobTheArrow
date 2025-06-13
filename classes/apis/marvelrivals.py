@@ -31,12 +31,21 @@ class RivalsAPI:
                     for h in sorted_heroes[:3]:
                         heroes.append(self.__extract_hero_data(h))
 
-                    returndata = {
-                        'update': self.__get_time(data['updates']['last_history_update']),
-                        'rank': data['player']['rank']['rank'],
-                        'winrate': f"{data['overall_stats']['ranked']['total_wins']/data['overall_stats']['ranked']['total_matches']*100:.2f}",
-                        'heroes': heroes
-                    }
+                    rank = data['player']['rank']['rank']
+                    if rank == "Invalid level":
+                        rank = "N/A"
+
+                    try:
+                        winrate = f"{data['overall_stats']['ranked']['total_wins']/data['overall_stats']['ranked']['total_matches']*100:.2f}%"
+                    except:
+                        winrate = "N/A"
+                    finally:
+                        returndata = {
+                            'update': self.__get_time(data['updates']['last_history_update']),
+                            'rank': rank,
+                            'winrate': winrate,
+                            'heroes': heroes
+                        }
 
                     return returndata
                 else:
