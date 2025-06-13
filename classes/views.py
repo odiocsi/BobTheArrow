@@ -32,6 +32,8 @@ class MusicView(View):
 
     async def __plpa(self, interaction):
         await interaction.response.defer()
+        if not self.__ctx.voice_client:
+            return
         if self.__ctx.voice_client.is_playing():
             self.__ctx.voice_client.pause()
         else:
@@ -40,11 +42,15 @@ class MusicView(View):
 
     async def __skip(self, interaction):
         await interaction.response.defer()
+        if not self.__ctx.voice_client:
+            return
         if self.__ctx and self.__ctx.voice_client.is_playing():
             self.__ctx.voice_client.stop()
 
     async def __shuffle(self, interaction):
         await interaction.response.defer()
+        if not self.__ctx.voice_client:
+            return
         self.__playlist.shuffle()
 
     async def __loop(self, interaction):
@@ -64,7 +70,7 @@ class MusicView(View):
         locale = get_locale(self.__guild.id)
         embed = discord.Embed(title=locale.musicplayer, color=0xFF0000)
 
-        if self.__playlist.isEmpty() and not self.__ctx.voice_client.is_playing() and not self.__isPaused:
+        if self.__playlist.isEmpty() and (not self.__ctx.voice_client or not self.__ctx.voice_client.is_playing()) and not self.__isPaused:
            embed.add_field(name=locale.status, value="Jelenleg nem megy zene.", inline=False)
         else:
             if self.__isPaused:

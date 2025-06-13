@@ -105,10 +105,11 @@ async def choose_song_automatically(response):
         response.answer = 0
 
 def play_next(ctx, view, playlist):
+
+    if playlist.isEmpty() and not playlist.getLoop() == "one" or not ctx.voice_client:
+        return
     ctx.voice_client.stop()
 
-    if playlist.isEmpty() and not playlist.getLoop() == "one":
-        return
 
     playlist.next()
     url = playlist.current['url']
