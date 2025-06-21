@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
 from discord.ui import Button, View
-import json
 import config
 from locales import languages
-from classes.shared import database, json_path
+from classes.shared import database
 
 def get_locale(guild_id):
     lang = database[str(guild_id)]["lang"]
@@ -125,6 +124,44 @@ class ChoosingView(View):
 
         await self.__msg.edit(content=None, embed=embed, view=self)
 
+class LolPlayerView(View):
+    def __init__(self, msg, data, name, tag, guild):
+        super().__init__(timeout=None)
+        self.__msg = msg
+        self.__data = data
+        self.__name = name
+        self.__tag = tag
+        self.__guild = guild
+
+    async def edit_message(self):
+        locale = get_locale(self.__guild.id)
+        string = f"{self.__name}#{self.__tag}{locale.ranked_statistics}"
+        title = f"{string}{self.__calculate_spaces(string)}"
+        embed = discord.Embed(title=title, color=0x800080)
+
+        if (len(self.__data["heroes"])>0):
+            embed.set_thumbnail(url=self.__data['heroes'][0]['img_url'])
+
+        embed.add_field(name=locale.rank, value=self.__data['rank'], inline=False)
+
+        embed.add_field(name=locale.winrate, value=f"{self.__data['winrate']}", inline=False)
+
+        heroes_data = ""
+        for hero in self.__data['heroes']:
+            heroes_data += f"\n**{hero['name'].title()}**\n{locale.matches}: {hero['matches']}\n{locale.winrate}: {hero['winrate']}%\nMVP/SVP: {hero['kda']}\n{locale.playtime}{hero['playtime']} óra\n"
+        if (len(self.__data["heroes"]) == 0):
+            heroes_data += "N/A"
+        embed.add_field(name=f"Top {locale.hero}", value=heroes_data, inline=False)
+
+        embed.add_field(name=locale.last_updated, value=self.__data['update'], inline=False)
+
+        await self.__msg.edit(content=None, embed=embed, view=self)
+
+    def __calculate_spaces(self, title):
+        if (70-len(title)>0):
+            return (70-len(title))*" \u200b"
+        return ""        
+
 class RivalsPlayerView(View):
     def __init__(self, msg, data, name, season, guild):
         super().__init__(timeout=None)
@@ -149,7 +186,7 @@ class RivalsPlayerView(View):
 
         heroes_data = ""
         for hero in self.__data['heroes']:
-            heroes_data += f"\n**{hero['name'].title()}**\n{locale.matches}: {hero['matches']}\n{locale.winrate}: {hero['winrate']}%\nMVP/SVP: {hero['mvpsvp']}\nJátszott idő: {hero['playtime']} óra\n"
+            heroes_data += f"\n**{hero['name'].title()}**\n{locale.matches}: {hero['matches']}\n{locale.winrate}: {hero['winrate']}%\nMVP/SVP: {hero['mvpsvp']}\n{locale.playtime}{hero['playtime']} óra\n"
         if (len(self.__data["heroes"]) == 0):
             heroes_data += "N/A"
         embed.add_field(name=f"Top {locale.hero}", value=heroes_data, inline=False)
@@ -380,3 +417,4 @@ class CustomHelpCommand(commands.HelpCommand):
 
         if current_embed:
             await self.context.send(embed=current_embed)
+

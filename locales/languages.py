@@ -14,6 +14,7 @@ class HuLocale:
         self.alias = "Rövidítés: "
         self.description = "Leírás: "
         self.usage = "Használat: "
+        self.playtime = "Játszott idő: "
 
         self.message_deleted = " üzenet törölve."
         self.cant_use_here = "Ezt a parancsot itt nem használhatod."
@@ -23,6 +24,8 @@ class HuLocale:
         self.no_song_found = "Nem található zene a megadott kereséssel."
         self.not_implemented = "Nincs implementálva."
         self.name_required = "A név megadása kötelező."
+        self.tag_required = "A címke megadása kötelező."
+        self.region_required = "A régió megadása kötelező."
         self.type_required = "A típus megadása kötelező."
         self.prefix_required = "A prefix megadása kötelező."
         self.message_required = "Az üzenet megadása kötelező."
@@ -58,6 +61,7 @@ class HuLocale:
         self.wrong_third_param = "Hibás 3. paraméter."
 
         self.ranked_statistics = " rangsorolt statisztikái"
+        self.statistics = " statisztikái"
         self.private_profile = "A megadott profil privát"
         self.unexpected_error = "Váratlan hiba történt"
         self.profile_update_started = "A profil frissítése megkezdödött"
@@ -95,7 +99,7 @@ class HuLocale:
         self.play_usage = "<cím/link/playlist>"
 
         self.lol_desc = "League of Legends statisztikák lekérése."
-        self.lol_usage = ""
+        self.lol_usage = "<név> <cimke> <régió(na1,br1,lan1,las1,kr,jp1,eun1,euw1,tr1,ru,oc1,ph2,sg2,th2,tw2,vn2])>"
 
         self.rivals_desc = "Marvel Rivals statisztikák lekérése"
         self.rivals_usage = "<név> <szezon(0,1,1.5 ...)/update> <típus(üres,map,matchup)>"
@@ -155,6 +159,7 @@ class EnLocale:
         self.alias = "Alias: "
         self.description = "Description: "
         self.usage = "Usage: "
+        self.playtime = "Playtime: "
 
         self.message_deleted = " message deleted."
         self.cant_use_here = "You can't use this command here."
@@ -164,6 +169,8 @@ class EnLocale:
         self.no_song_found = "No song found with the given search."
         self.not_implemented = "Not implemented."
         self.name_required = "Name is required."
+        self.tag_required = "Tag is required."
+        self.region_required = "Region is required."
         self.type_required = "Type is required."
         self.prefix_required = "Prefix is required."
         self.message_required = "Message is required."
@@ -199,6 +206,7 @@ class EnLocale:
         self.wrong_third_param = "Incorrect 3rd parameter."
 
         self.ranked_statistics = " ranked statistics"
+        self.statistics = " statistics"
         self.private_profile = "The given profile is private"
         self.unexpected_error = "An unexpected error occurred"
         self.profile_update_started = "Profile update started"
@@ -235,7 +243,7 @@ class EnLocale:
         self.play_usage = "<title/link/playlist>"
 
         self.lol_desc = "Fetch League of Legends statistics."
-        self.lol_usage = ""
+        self.lol_usage = "<name> <tag> <region(na1,br1,lan1,las1,kr,jp1,eun1,euw1,tr1,ru,oc1,ph2,sg2,th2,tw2,vn2])>"
 
         self.rivals_desc = "Fetch Marvel Rivals statistics"
         self.rivals_usage = "<name> <season(0,1,1.5 ...)/update> <type(empty,map,matchup)>"
