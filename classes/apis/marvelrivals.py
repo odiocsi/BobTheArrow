@@ -35,6 +35,7 @@ class RivalsAPI:
                     if rank == "Invalid level":
                         rank = "N/A"
 
+                    winrate = ""
                     try:
                         winrate = f"{data['overall_stats']['ranked']['total_wins']/data['overall_stats']['ranked']['total_matches']*100:.2f}%"
                     except:

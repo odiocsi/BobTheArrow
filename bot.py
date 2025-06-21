@@ -11,6 +11,7 @@ from discord.ext import commands
 import config
 from locales import languages
 from classes.apis import marvelrivals
+from classes.apis import lol
 from classes import music
 from classes import views
 from classes.shared import database, json_path
@@ -269,11 +270,59 @@ if config.musicplayer:
 
 if config.lolapi:
     @bot.command(name="league", aliases=["lol"])
-    async def league(ctx):
-        locale =get_locale(ctx.guild.id)
-        msg = await ctx.send (locale.not_implemented)
-        await asyncio.sleep(2)
-        await delete_message(ctx, msg)
+    async def league(ctx, name=None, tag=None, region=None):
+        locale = get_locale(ctx.guild.id)
+        if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['lol'] == None:
+            msg = await ctx.send(locale.lol_channel_not_set)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        if not database[str(ctx.guild.id)]['lol'] == ctx.channel.id:
+            msg = await ctx.send(locale.cant_use_here)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        if name is None:
+            msg = await ctx.send(locale.name_required)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        if tag is None:
+            msg = await ctx.send(locale.tag_required)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        if region is None:
+            msg = await ctx.send(locale.region_required)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        if region not in ['na1', 'br1', 'lan1', 'las1', 'kr', 'jp1', 'eun1', 'euw1', 'tr1', 'ru', 'oc1', 'ph2', 'sg2', 'th2', 'tw2', 'vn2']:
+            msg = await ctx.send(locale.wrong_third_param)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        msg = await ctx.send("...")
+        embed = discord.Embed(title=f"{name}{locale.statistics}", color=0x800080)
+        embed.add_field(name=locale.status, value=locale.loading, inline=False)
+        await msg.edit(content=None, embed=embed)
+        data = lol_api.get_player_data(name, tag, region)
+        if isinstance(data, dict):
+            view = views.LolPlayerView(msg, data, name, tag, ctx.guild)
+            await view.edit_message()
+            await msg.edit(view=view)
+        else:
+            embed = discord.Embed(title=f"{name}{locale.statistics}", color=0x800080)
+            embed.add_field(name=locale.status, value=locale.unexpected_error, inline=False)
+            await msg.edit(content=None, embed=embed)
+            return
+
 
 if config.rivalsapi:
     @bot.command(name="rivals", aliases=["rv"])
@@ -311,7 +360,6 @@ if config.rivalsapi:
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
             return
-
 
         if typ == "map":
             msg = await ctx.send("...")
@@ -426,7 +474,6 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
             msg = await ctx.send(locale.type_required)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
-        msg = ""
         if typ == "music" and config.musicplayer:
             if database[str(ctx.guild.id)]['music'] == None:
                 db_add_channel(str(ctx.guild.id), "music", ctx.channel.id)
@@ -475,7 +522,6 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
             msg = await ctx.send(locale.type_required)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
-        msg = ""
         if typ == "music"  and config.musicplayer:
             if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['music'] == None:
                 msg = await ctx.send(locale.music_channel_not_set)
@@ -704,8 +750,8 @@ async def on_message(message):
 @bot.event
 async def on_member_join(member):
     guild = member.guild
-    ensure_db_structure(guild_id)
-    locale =get_locale(guild.id)
+    ensure_db_structure(guild.id)
+    locale = get_locale(guild.id)
     if config.welcome:
         if str(guild.id) in database and database[str(guild.id) ]['welcome_rls'] != None:
             roles = [member.guild.get_role(role_id) for role_id in database[str(guild.id) ]["welcome_rls"]]
@@ -739,6 +785,12 @@ if config.rivalsapi:
     if TOKEN is None:
         raise ValueError("Rivals API Key not set.")
     rivals_api = marvelrivals.RivalsAPI(TOKEN)
+
+if config.lolapi:
+    TOKEN = os.getenv("LOL_API_KEY")
+    if TOKEN is None:
+        raise ValueError("Lol API Key not set.")
+    lol_api = lol.LolAPI(TOKEN)
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN is None:
