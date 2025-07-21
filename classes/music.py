@@ -46,11 +46,11 @@ class MusicDownloader:
                 search_result = ydl.extract_info(f'ytsearch{max_results}:{query}', download=False)
                 return ["keyword", search_result]
 
-    def download(self, url):
-        with YoutubeDL(download_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info)
-            return file_path
+    def get_stream_url(self, url):
+        with YoutubeDL(search_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return info['url']
+
 
     @staticmethod
     def __is_url(query):
@@ -136,4 +136,5 @@ class Playlist:
             return string
         else:
             return  self.__locale.no_song_in_playlist
+
 
