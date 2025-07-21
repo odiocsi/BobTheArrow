@@ -3,10 +3,11 @@ import time
 import asyncio
 import signal
 import json
+import requests
 from dotenv import load_dotenv
 
 import discord
-from discord.ext import commands
+from discord.ext import tasks, commands
 
 import config
 from locales import languages
@@ -16,7 +17,8 @@ from classes import music
 from classes import views
 from classes.shared import database, json_path
 
-music_channel_not_set = "music_channel_not_set"
+from threading import Thread
+from classes.apis.serverstatistics import app as gameserver_api
 
 ## Config
 intents = discord.Intents.default()
@@ -44,20 +46,20 @@ mdown = music.MusicDownloader()
 playlists = {}
 message_views = {}
 responses = {}
-download_folder = config.download_path
 awaited_delete = False
 
-## Util
+## Utility
 class Response():
     def __init__(self):
         self.answer = -1
         self.choosing = False
 
-async def find_existing_message(channel):
-    async for msg in channel.history(limit=50):
-        if msg.author == channel.guild.me and msg.components:
-            return msg
-    return None
+async def find_existing_message(channel, id):
+    try:
+        message = await channel.fetch_message(id)
+        return message
+    except:
+        return None
 
 async def get_server_playlist(ctx):
     if ctx.guild.id not in playlists:
@@ -106,7 +108,6 @@ async def choose_song_automatically(response):
         response.answer = 0
 
 def play_next(ctx, view, playlist):
-
     if playlist.isEmpty() and not playlist.getLoop() == "one" or not ctx.voice_client:
         return
     ctx.voice_client.stop()
@@ -114,15 +115,42 @@ def play_next(ctx, view, playlist):
 
     playlist.next()
     url = playlist.current['url']
-    audio_file = mdown.download(url)
+    audio_file = mdown.get_stream_url(url)
 
     ctx.voice_client.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: play_next(ctx, view, playlist))
 
-
+@tasks.loop(seconds=1)
 async def update_view(view):
     while True:
         time.sleep(1)
         await view.edit_message()
+
+@tasks.loop(seconds=10)
+async def update_serverstats():
+    for guild in bot.guilds:
+        locale = get_locale(guild.id)
+        channel_id = database[str(guild.id)]["serverstats"]
+        if channel_id:
+            params = {
+                "server_id": guild.id
+            }
+            response = requests.get("http://127.0.0.1:5000/gameserver/get", params=params)
+            channel = bot.get_channel(channel_id)
+            msg_id = database[str(channel.guild.id)]["serverstats_msg"]
+            msg = await find_existing_message(channel, msg_id)
+            if not msg:
+                msg = await channel.send(locale.loading)
+                embed = discord.Embed(title=locale.serverstats, color=0xFF0000)
+                embed.add_field(name=locale.status, value=locale.loading, inline=False)
+                await msg.edit(content=None, embed=embed)
+                database[str(channel.guild.id)]["serverstats_msg"] = msg.id
+            if response.status_code == 200:
+                serverinfo = response.json()
+                view = views.ServerStatisticsView(msg, guild, serverinfo["name"], serverinfo["max"], serverinfo["current"], serverinfo["img"])
+            else:
+                view = views.ServerStatisticsView(msg, guild, locale.serverstats, "A", "N", "https://cdn3.iconfinder.com/data/icons/meteocons/512/n-a-128.png")
+            await view.edit_message()
+            await msg.edit(view=view)
 
 
 async def delete_message(ctx = None, msg = None, mgs = None):
@@ -136,18 +164,23 @@ async def delete_message(ctx = None, msg = None, mgs = None):
     except:
         print("the message deletion failed")
 
-def delete_all_files_in_folder():
-    for filename in os.listdir(download_folder):
-        file_path = os.path.join(download_folder, filename)
-        if os.path.isfile(file_path):
-            try:
-                os.remove(file_path)
-            except:
-                print("the file deletion failed")
-
 def ensure_db_structure(guild_id):
     if str(guild_id) not in database:
-        database[str(guild_id)] = {"music": None, "welcome": None, "lol": None, "rivals": None, "prefix" : config.default_command_prefix, "lang": config.default_lang, "timezone": "CET", "restricted_words": [], "welcome_msg": "", "welcome_rls" : []}
+        database[str(guild_id)] = {"members": None,
+                                   "serverstats": None,
+                                   "serverstats_msg": None,
+                                   "music": None,
+                                   "music_msg": None,
+                                   "welcome": None,
+                                   "lol": None,
+                                   "rivals": None,
+                                   "prefix" : config.default_command_prefix,
+                                   "lang": config.default_lang,
+                                   "timezone": "CET",
+                                   "restricted_words": [],
+                                   "welcome_msg": "",
+                                   "welcome_rls" : []
+                                   }
 
 def db_add_channel(guild_id, category, channel_id):
     ensure_db_structure(guild_id)
@@ -165,10 +198,6 @@ async def shutdown():
 
 def on_shutdown_signal():
     asyncio.create_task(shutdown())
-
-@bot.event
-async def on_ready():
-    print("the bot have started")
 
 ## Commands
 if config.musicplayer:
@@ -240,7 +269,8 @@ if config.musicplayer:
 
         playlist = await get_server_playlist(ctx)
 
-        msg = await find_existing_message(ctx)
+        msg_id = database[str(ctx.guild.id)]["music_msg"]
+        msg = await find_existing_message(ctx, msg_id)
         if not msg:
             msg = await ctx.send(locale.loading)
             embed = discord.Embed(title=locale.musicplayer, color=0xFF0000)
@@ -257,7 +287,8 @@ if config.musicplayer:
         else:
             playlist.add(search_results['title'], search_results['url'])
 
-        bot.loop.create_task(update_view(view))
+        if not update_view.is_running():
+            update_view.start(view)
 
         await asyncio.sleep(2)
         await delete_message(ctx)
@@ -469,43 +500,64 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
     @bot.command(name="set_channel", aliases=["sc"])
     @commands.has_permissions(administrator=True)
     async def set_channel(ctx, typ=None):
-        locale =get_locale(ctx.guild.id)
+        locale = get_locale(ctx.guild.id)
         if typ is None:
             msg = await ctx.send(locale.type_required)
             await asyncio.sleep(2)
             await delete_message(ctx, msg)
+        id = str(ctx.guild.id)
         if typ == "music" and config.musicplayer:
-            if database[str(ctx.guild.id)]['music'] == None:
-                db_add_channel(str(ctx.guild.id), "music", ctx.channel.id)
-                save_database()
+            if database[id]['music'] == None:
+                db_add_channel(id, "music", ctx.channel.id)
 
                 msg = await ctx.send(f"{locale.music_set_to}{ctx.channel.mention}")
             else:
                 msg = await ctx.send(locale.music_channel_already_set)
         elif typ == "lol"  and config.lolapi:
-            if database[str(ctx.guild.id)]['lol'] == None:
-                db_add_channel(str(ctx.guild.id), "lol", ctx.channel.id)
-                save_database()
+            if database[id]['lol'] == None:
+                db_add_channel(id, "lol", ctx.channel.id)
 
                 msg = await ctx.send(f"{locale.lol_set_to}{ctx.channel.mention}")
             else :
                 msg = await ctx.send(locale.lol_channel_already_set)
         elif typ == "rivals"  and config.rivalsapi:
-            if database[str(ctx.guild.id)]['rivals'] == None:
-                db_add_channel(str(ctx.guild.id), "rivals", ctx.channel.id)
-                save_database()
+            if database[id]['rivals'] == None:
+                db_add_channel(id, "rivals", ctx.channel.id)
 
                 msg = await ctx.send(f"{locale.rivals_set_to}{ctx.channel.mention}")
             else:
                 msg = await ctx.send(locale.rivals_channel_already_set)
         elif typ == "welcome"  and config.welcome:
-            if database[str(ctx.guild.id)]['welcome'] == None:
-                db_add_channel(str(ctx.guild.id), "welcome", ctx.channel.id)
-                save_database()
+            if database[id]['welcome'] == None:
+                db_add_channel(id, "welcome", ctx.channel.id)
 
                 msg = await ctx.send(f"{locale.welcome_set_to}{ctx.channel.mention}")
             else:
                 msg = await ctx.send(locale.welcome_channel_already_set)
+        elif typ == "members"  and config.membercount:
+            if database[id]['members'] == None:
+                db_add_channel(id, "members", ctx.channel.id)
+
+                msg = await ctx.send(f"{locale.members_set_to}{ctx.channel.mention}")
+            else:
+                msg = await ctx.send(locale.members_channel_already_set)
+        elif typ == "serverstats"  and config.serverstats:
+            if database[id]['serverstats'] == None:
+                db_add_channel(id, "serverstats", ctx.channel.id)
+
+                msg = await ctx.send(locale.loading)
+                embed = discord.Embed(title=locale.serverstats, color=0xFF0000)
+                embed.add_field(name=locale.status, value=locale.loading, inline=False)
+                view = views.ServerStatisticsView(msg, ctx.guild, locale.serverstats, "A", "N", "https://cdn3.iconfinder.com/data/icons/meteocons/512/n-a-128.png")
+                await view.edit_message()
+                await msg.edit(view=view)
+
+                database[str(ctx.guild.id)]["serverstats_msg"] = msg.id
+                save_database()
+
+                msg = await ctx.send(f"{locale.serverstats_set_to}{ctx.channel.mention}")
+            else:
+                msg = await ctx.send(locale.serverstats_channel_already_set)
         else:
             msg = await ctx.send(locale.wrong_first_param)
             await asyncio.sleep(2)
@@ -554,6 +606,22 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
                 save_database()
 
                 msg = await ctx.send(locale.welcome_channel_deleted)
+        elif typ == "members"  and config.welcome:
+            if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['members'] == None:
+                msg = await ctx.send(locale.members_channel_not_set)
+            else:
+                database[str(ctx.guild.id)]['members'] = None
+                save_database()
+
+                msg = await ctx.send(locale.members_channel_deleted)
+        elif typ == "serverstats"  and config.serverstats:
+            if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['serverstats'] == None:
+                msg = await ctx.send(locale.serverstats_channel_not_set)
+            else:
+                database[str(ctx.guild.id)]['serverstats'] = None
+                save_database()
+
+                msg = await ctx.send(locale.serverstats_channel_deleted)
         else:
             msg = await ctx.send(locale.wrong_first_param)
             await asyncio.sleep(2)
@@ -725,6 +793,16 @@ if config.setlang:
         await asyncio.sleep(2)
         await delete_message(ctx, msg)
 
+@bot.command(name="test")
+async def test(ctx):
+    guild = ctx.guild
+    locale = get_locale(guild.id)
+    if database[str(guild.id)]["members"]:
+        count = len([m for m in guild.members if not m.bot])
+        database[str(guild.id)]["member_count"] = count
+        save_database()
+        await bot.get_channel(database[str(guild.id)]["members"]).edit(name=f"{locale.member_count}{count}")
+
 ## Events
 @bot.event
 async def on_message(message):
@@ -750,8 +828,10 @@ async def on_message(message):
 @bot.event
 async def on_member_join(member):
     guild = member.guild
-    ensure_db_structure(guild.id)
     locale = get_locale(guild.id)
+    if config.membercount and database[str(guild.id)]["members"]:
+        count = len([m for m in guild.members if not m.bot])
+        await bot.get_channel(database[str(guild.id)]["members"]).edit(name=f"{locale.member_count}{count}")
     if config.welcome:
         if str(guild.id) in database and database[str(guild.id) ]['welcome_rls'] != None:
             roles = [member.guild.get_role(role_id) for role_id in database[str(guild.id) ]["welcome_rls"]]
@@ -775,6 +855,14 @@ async def on_member_join(member):
                 await msg.edit(content=None, embed=embed)
 
 @bot.event
+async def on_member_remove(member):
+    guild = member.guild
+    locale = get_locale(guild.id)
+    if config.membercount and database[str(guild.id)]["members"]:
+        count = len([m for m in guild.members if not m.bot])
+        await bot.get_channel(database[str(guild.id)]["members"]).edit(name=f"{locale.member_count}{count}")
+
+@bot.event
 async def on_guild_join(guild):
     ensure_db_structure(str(guild.id))
 
@@ -796,11 +884,28 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN is None:
     raise ValueError("Discord API Token not set.")
 
-delete_all_files_in_folder()
+@bot.event
+async def on_ready():
+    for guild in bot.guilds:
+        ensure_db_structure(guild.id)
+    save_database()
 
-try:
+    activity = discord.Game(name=config.activity_status)
+    await bot.change_presence(activity=activity)
+    print(f"Logged in as {bot.user}")
+
+    if config.serverstats:
+        if not update_serverstats.is_running():
+            update_serverstats.start()
+
+def run_flask():
+    gameserver_api.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
+
+if __name__ == "__main__":
+    if config.serverstats:
+        flask_thread = Thread(target=run_flask)
+        flask_thread.daemon = True
+        flask_thread.start()
+
     signal.signal(signal.SIGINT, lambda signal, frame: on_shutdown_signal())
     bot.run(TOKEN)
-except Exception as e:
-    print(f"Error: {e}")
-
