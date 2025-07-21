@@ -139,3 +139,7 @@ Ensure your `.env` file is properly configured with the bot token and other nece
 ## Acknowledgments
 Marvel Rivals statistics: [MarvelRivalsAPI](https://marvelrivalsapi.com)   
 Warframe information: [WarframeStatus API](https://docs.warframestat.us)
+
+## Support
+If you encounter any issues, feel free to open an issue here on GitHub or contact me on Discord.   
+Discord: `lightning7510`
