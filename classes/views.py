@@ -418,3 +418,23 @@ class CustomHelpCommand(commands.HelpCommand):
         if current_embed:
             await self.context.send(embed=current_embed)
 
+class ServerStatisticsView(View):
+    def __init__(self, msg, guild, name, max, current, img):
+        super().__init__(timeout=None)
+        self.__msg = msg
+        self.__guild = guild
+        self.__name = name
+        self.__max = max
+        self.__current = current
+        self.__img = img
+
+    async def edit_message(self):
+        locale = get_locale(self.__guild.id)
+        embed = discord.Embed(title=self.__name, color=0x800080)
+
+        embed.set_thumbnail(url=self.__img)
+
+        txt = f"{self.__current}/{self.__max}"
+        embed.add_field(name=locale.serverstats_players, value=txt, inline=False)
+
+        await self.__msg.edit(content=None, embed=embed, view=self)
