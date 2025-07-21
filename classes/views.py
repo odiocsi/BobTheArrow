@@ -313,6 +313,12 @@ class CustomHelpCommand(commands.HelpCommand):
                 "aliases": ["rv"],
                 "enabled": config.rivalsapi,
             },
+            "warframe": {
+                "description": locale.wf_desc,
+                "usage": f"<prefix>warframe {locale.wf_usage}",
+                "aliases": ["wf"],
+                "enabled": config.wfapi,
+            },
             "clear": {
                 "description": locale.chat_desc,
                 "usage": f"<prefix>clear {locale.chat_usage}",
@@ -436,5 +442,46 @@ class ServerStatisticsView(View):
 
         txt = f"{self.__current}/{self.__max}"
         embed.add_field(name=locale.serverstats_players, value=txt, inline=False)
+
+        await self.__msg.edit(content=None, embed=embed, view=self)
+
+class WfCycleView(View):
+    def __init__(self, msg, guild, cetus, vallis, cambion):
+        super().__init__(timeout=None)
+        self.__msg = msg
+        self.__guild = guild
+        self.__name = "Warframe"
+        self.__cetus = cetus
+        self.__vallis = vallis
+        self.__cambion = cambion
+
+    async def edit_message(self):
+        embed = discord.Embed(title=self.__name, color=0x800080)
+
+        embed.set_thumbnail(url=config.cycle_img)
+
+        embed.add_field(name="Cetus", value=self.__cetus, inline=False)
+        embed.add_field(name="Orb Vallis", value=self.__vallis, inline=False)
+        embed.add_field(name="Cambion Drift", value=self.__cambion, inline=False)
+
+        await self.__msg.edit(content=None, embed=embed, view=self)
+
+class WfBarooView(View):
+    def __init__(self, msg, guild, status, arrives, departs):
+        super().__init__(timeout=None)
+        self.__msg = msg
+        self.__guild = guild
+        self.__name = "Baro Ki'Teer"
+        self.__status = status
+        self.__arrives = arrives
+        self.__departs = departs
+
+    async def edit_message(self):
+        locale = get_locale(self.__guild.id)
+        embed = discord.Embed(title=self.__name, color=0x800080)
+
+        embed.set_thumbnail(url=config.baro_img)
+
+        embed.add_field(name=(f"{locale.baro_active}" if self.__status else f"{locale.baro_active}"), value=(f"{self.__departs}" if self.__status else f"{self.__arrives}"), inline=False)
 
         await self.__msg.edit(content=None, embed=embed, view=self)

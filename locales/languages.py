@@ -71,20 +71,36 @@ class HuLocale:
         self.music_channel_not_set = "Nincsen beállítva csatorna a zenelejátszóhoz."
         self.music_channel_deleted = "A zene csatorna törölve."
 
-        self.lol_set_to = "A lol csatorna beállítva a következőre: "
-        self.lol_channel_already_set = "A lol csatorna már be van állítva."
-        self.lol_channel_not_set = "Nincsen beállítva csatorna a lol statisztikákhoz."
-        self.lol_channel_deleted = "A lol csatorna törölve."
+        self.lol_set_to = "A League csatorna beállítva a következőre: "
+        self.lol_channel_already_set = "A League csatorna már be van állítva."
+        self.lol_channel_not_set = "Nincsen beállítva csatorna a League statisztikákhoz."
+        self.lol_channel_deleted = "A League csatorna törölve."
 
-        self.rivals_set_to = "A rivals csatorna beállítva a következőre: "
-        self.rivals_channel_already_set = "A rivals csatorna már be van állítva."
-        self.rivals_channel_not_set = "Nincsen beállítva csatorna a rivals statisztikákhoz."
-        self.rivals_channel_deleted = "A rivals csatorna törölve."
+        self.rivals_set_to = "A Rivals csatorna beállítva a következőre: "
+        self.rivals_channel_already_set = "A Rivals csatorna már be van állítva."
+        self.rivals_channel_not_set = "Nincsen beállítva csatorna a Rivals statisztikákhoz."
+        self.rivals_channel_deleted = "A Rivals csatorna törölve."
+
+        self.wf_set_to = "A Warframe csatorna beállítva a következőre: "
+        self.wf_channel_already_set = "A Warframe csatorna már be van állítva."
+        self.wf_channel_not_set = "Nincsen beállítva csatorna a Warframe információkhoz."
+        self.wf_channel_deleted = "A Warframe csatorna törölve."
 
         self.welcome_set_to = "Az üdvözlő csatorna beállítva a következőre: "
         self.welcome_channel_already_set = "Az üdvözlő csatorna már be van állítva."
         self.welcome_channel_not_set = "Nincsen beállítva csatorna az üdvözlő üzenetekhez."
         self.welcome_channel_deleted = "Az üdvözlő csatorna törölve."
+
+        self.members_set_to = "A tagok csatorna beállítva a következőre: "
+        self.members_channel_already_set = "A tagok csatorna már be van állítva."
+        self.members_channel_not_set = "Nincsen beállítva csatorna a tagok számához."
+        self.members_channel_deleted = "A tagok csatorna törölve."
+
+        self.serverstats_set_to = "A szerver statisztikák csatorna beállítva a következőre: "
+        self.serverstats_channel_already_set = "A szerver statisztikák csatorna már be van állítva."
+        self.serverstats_channel_not_set = "Nincsen beállítva csatorna a szerver statisztikákhoz."
+        self.serverstats_channel_deleted = "A szerver statisztikák csatorna törölve."
+
 
 
         self.started = "A bot elindult."
@@ -104,14 +120,17 @@ class HuLocale:
         self.rivals_desc = "Marvel Rivals statisztikák lekérése"
         self.rivals_usage = "<név> <szezon(0,1,1.5 ...)/update> <típus(üres,map,matchup)>"
 
+        self.wf_desc = "Warframe platform beállítása"
+        self.wf_usage = "<platform(pc,ps4,xb1,swi)>"
+
         self.chat_desc = "Chat üzenetek törlése"
         self.chat_usage = "<üzenetszám>"
 
         self.set_channel_desc = "Csatorna beállítása egy specifikus üzenethez."
-        self.set_channel_usage = "<típus(music,rivals,lol,welcome)>"
+        self.set_channel_usage = "<típus(music,rivals,lol,wf,welcome,members,serverstats)>"
 
         self.clear_channel_desc = "Csatorna törlése egy specfikus üzenethez."
-        self.clear_channel_usage = "<típus(music,rivals,lol,welcome)>"
+        self.clear_channel_usage = "<típus(music,rivals,lol,wf,welcome,members,serverstats)>"
 
         self.set_prefix_desc = "A bot előtagjának beállítása."
         self.set_prefix_usage = "<prefix>"
@@ -143,6 +162,17 @@ class HuLocale:
         self.leave_desc = "Lecsatlakozás egy hangcsatornáról."
         self.leave_usage = ""
 
+        self.member_count = "tagok "
+
+        self.serverstats = "Nincs információ"
+        self.serverstats_players = "Játékosok"
+
+        self.baro_active = "Aktív"
+        self.baro_inactive = "Inaktív"
+
+        self.platform_required = "A platform megadása kötelező."
+        self.platform_must_be = "A platformnak a következők egyikének kell lennie: pc, ps4, xb1, swi."
+        self.platform_set_to = "A platform be lett állítva: "
 
 class EnLocale:
     def __init__(self):
@@ -216,20 +246,35 @@ class EnLocale:
         self.music_channel_not_set = "No channel set for the music player."
         self.music_channel_deleted = "Music channel deleted."
 
-        self.lol_set_to = "LOL channel set to: "
-        self.lol_channel_already_set = "LOL channel is already set."
-        self.lol_channel_not_set = "No channel set for LOL statistics."
-        self.lol_channel_deleted = "LOL channel deleted."
+        self.lol_set_to = "League channel set to: "
+        self.lol_channel_already_set = "League channel is already set."
+        self.lol_channel_not_set = "No channel set for League statistics."
+        self.lol_channel_deleted = "League channel deleted."
 
         self.rivals_set_to = "Rivals channel set to: "
         self.rivals_channel_already_set = "Rivals channel is already set."
         self.rivals_channel_not_set = "No channel set for Rivals statistics."
         self.rivals_channel_deleted = "Rivals channel deleted."
 
+        self.wf_set_to = "Warframe channel set to: "
+        self.wf_channel_already_set = "Warframe channel is already set."
+        self.wf_channel_not_set = "No channel set for Warframe information."
+        self.wf_channel_deleted = "Warframe channel deleted."
+
         self.welcome_set_to = "Welcome channel set to: "
         self.welcome_channel_already_set = "Welcome channel is already set."
         self.welcome_channel_not_set = "No channel set for welcome messages."
         self.welcome_channel_deleted = "Welcome channel deleted."
+
+        self.members_set_to = "Members channel set to: "
+        self.members_channel_already_set = "Members channel is already set."
+        self.members_channel_not_set = "No channel set for the count of members."
+        self.members_channel_deleted = "Members channel deleted."
+
+        self.serverstats_set_to = "Server statistics channel set to: "
+        self.serverstats_channel_already_set = "Server statistics channel is already set."
+        self.serverstats_channel_not_set = "No channel set for server statistics."
+        self.serverstats_channel_deleted = "Server statistics channel deleted."
 
         self.started = "The bot has started."
         self.stopped = "The bot has stopped."
@@ -248,14 +293,17 @@ class EnLocale:
         self.rivals_desc = "Fetch Marvel Rivals statistics"
         self.rivals_usage = "<name> <season(0,1,1.5 ...)/update> <type(empty,map,matchup)>"
 
+        self.wf_desc = "Set Warframe platform"
+        self.wf_usage = "<platform(pc,ps4,xb1,swi)>"
+
         self.chat_desc = "Delete chat messages"
         self.chat_usage = "<number_of_messages>"
 
         self.set_channel_desc = "Set channel for a specific message."
-        self.set_channel_usage = "<type(music,rivals,lol,welcome)>"
+        self.set_channel_usage = "<type(music,rivals,lol,wf,welcome,members,serverstats)>"
 
         self.clear_channel_desc = "Clear channel for a specific message."
-        self.clear_channel_usage = "<type(music,rivals,lol,welcome)>"
+        self.clear_channel_usage = "<type(music,rivals,lol,wf,welcome,members,serverstats)>"
 
         self.set_prefix_desc = "Set the bot prefix."
         self.set_prefix_usage = "<prefix>"
@@ -286,6 +334,18 @@ class EnLocale:
 
         self.leave_desc = "Leave a voice channel."
         self.leave_usage = ""
+
+        self.member_count = "members "
+
+        self.serverstats = "No information"
+        self.serverstats_players = "Players"
+
+        self.baro_active = "Active"
+        self.baro_inactive = "Inactive"
+
+        self.platform_required = "Platform is required."
+        self.platform_must_be = "Platform must be one of the following: pc, ps4, xb1, swi."
+        self.platform_set_to = "Platform has been set to: "
 
 hu = HuLocale()
 en = EnLocale()

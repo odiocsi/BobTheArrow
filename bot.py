@@ -13,6 +13,7 @@ import config
 from locales import languages
 from classes.apis import marvelrivals
 from classes.apis import lol
+from classes.apis import warframe as wf
 from classes import music
 from classes import views
 from classes.shared import database, json_path
@@ -125,7 +126,7 @@ async def update_view(view):
         time.sleep(1)
         await view.edit_message()
 
-@tasks.loop(seconds=10)
+@tasks.loop(seconds=30)
 async def update_serverstats():
     for guild in bot.guilds:
         locale = get_locale(guild.id)
@@ -152,6 +153,42 @@ async def update_serverstats():
             await view.edit_message()
             await msg.edit(view=view)
 
+@tasks.loop(seconds=10)
+async def update_wf():
+    for guild in bot.guilds:
+        locale = get_locale(guild.id)
+        channel_id = database[str(guild.id)]["warframe"]
+        if channel_id:
+            channel = bot.get_channel(channel_id)
+            msg_id = database[str(channel.guild.id)]["warframe_msg1"]
+            msg = await find_existing_message(channel, msg_id)
+            if not msg:
+                msg = await channel.send(locale.loading)
+                embed = discord.Embed(title=locale.serverstats, color=0xFF0000)
+                embed.add_field(name=locale.status, value=locale.loading, inline=False)
+                await msg.edit(content=None, embed=embed)
+                database[str(channel.guild.id)]["warframe_msg1"] = msg.id
+
+            cycle = wf_api.get_cycle(database[str(channel.guild.id)]["warframe_platform"])
+            view = views.WfCycleView(msg, guild, cycle["cetus"], cycle["vallis"], cycle["cambion"])
+            await view.edit_message()
+            await msg.edit(view=view)
+
+            msg_id = database[str(channel.guild.id)]["warframe_msg2"]
+            msg = await find_existing_message(channel, msg_id)
+            if not msg:
+                msg = await channel.send(locale.loading)
+                embed = discord.Embed(title=locale.serverstats, color=0xFF0000)
+                embed.add_field(name=locale.status, value=locale.loading, inline=False)
+                await msg.edit(content=None, embed=embed)
+                database[str(channel.guild.id)]["warframe_msg2"] = msg.id
+
+            trader = wf_api.get_trader(database[str(channel.guild.id)]["warframe_platform"])
+            view = views.WfBarooView(msg, guild, trader["status"], trader["arrives"], trader["departs"])
+            await view.edit_message()
+            await msg.edit(view=view)
+
+
 
 async def delete_message(ctx = None, msg = None, mgs = None):
     try:
@@ -174,6 +211,10 @@ def ensure_db_structure(guild_id):
                                    "welcome": None,
                                    "lol": None,
                                    "rivals": None,
+                                   "warframe": None,
+                                   "warframe_msg1": None,
+                                   "warframe_msg2": None,
+                                   "warframe_platform": config.default_platform,
                                    "prefix" : config.default_command_prefix,
                                    "lang": config.default_lang,
                                    "timezone": "CET",
@@ -478,6 +519,40 @@ if config.rivalsapi:
                 await view.edit_message()
                 await msg.edit(view=view)
 
+if config.wfapi:
+    @bot.command(name="warframe", aliases=["wf"])
+    async def warframe(ctx, platform=None):
+        locale = get_locale(ctx.guild.id)
+        if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['warframe'] == None:
+            msg = await ctx.send(locale.wf_channel_not_set)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        if not database[str(ctx.guild.id)]['warframe'] == ctx.channel.id:
+            msg = await ctx.send(locale.cant_use_here)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        if platform is None:
+            msg = await ctx.send(locale.platform_required)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        if platform not in ["pc", "ps4", "xb1", "swi"]:
+            msg = await ctx.send(locale.platform_must_be)
+            await asyncio.sleep(2)
+            await delete_message(ctx, msg)
+            return
+
+        database[str(ctx.guild.id)]["warframe_platform"] = platform
+        msg = await ctx.send(f"{locale.platform_set_to}{platform}")
+        await asyncio.sleep(2)
+        await delete_message(ctx, msg)
+
+
 if config.clear:
     @bot.command(name="clear", aliases=["cl"])
     @commands.has_permissions(administrator=True)
@@ -558,6 +633,41 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
                 msg = await ctx.send(f"{locale.serverstats_set_to}{ctx.channel.mention}")
             else:
                 msg = await ctx.send(locale.serverstats_channel_already_set)
+        elif typ == "wf" and config.wfapi:
+            if database[id]['warframe'] == None:
+                db_add_channel(id, "warframe", ctx.channel.id)
+
+                msg_id = database[str(ctx.guild.id)]["warframe_msg1"]
+                msg = await find_existing_message(ctx, msg_id)
+                if not msg:
+                    msg = await ctx.send(locale.loading)
+                    embed = discord.Embed(title=locale.serverstats, color=0xFF0000)
+                    embed.add_field(name=locale.status, value=locale.loading, inline=False)
+                    await msg.edit(content=None, embed=embed)
+                    database[str(ctx.guild.id)]["warframe_msg1"] = msg.id
+
+                cycle = wf_api.get_cycle(database[str(ctx.guild.id)]["warframe_platform"])
+                view = views.WfCycleView(msg, ctx.guild, cycle["cetus"], cycle["vallis"], cycle["cambion"])
+                await view.edit_message()
+                await msg.edit(view=view)
+
+                msg_id = database[str(ctx.guild.id)]["warframe_msg2"]
+                msg = await find_existing_message(ctx, msg_id)
+                if not msg:
+                    msg = await ctx.send(locale.loading)
+                    embed = discord.Embed(title=locale.serverstats, color=0xFF0000)
+                    embed.add_field(name=locale.status, value=locale.loading, inline=False)
+                    await msg.edit(content=None, embed=embed)
+                    database[str(ctx.guild.id)]["warframe_msg2"] = msg.id
+
+                trader = wf_api.get_trader(database[str(ctx.guild.id)]["warframe_platform"])
+                view = views.WfBarooView(msg, ctx.guild, trader["status"], trader["arrives"], trader["departs"])
+                await view.edit_message()
+                await msg.edit(view=view)
+
+                msg = await ctx.send(f"{locale.wf_set_to}{ctx.channel.mention}")
+            else:
+                msg = await ctx.send(locale.wf_channel_already_set)
         else:
             msg = await ctx.send(locale.wrong_first_param)
             await asyncio.sleep(2)
@@ -622,6 +732,14 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
                 save_database()
 
                 msg = await ctx.send(locale.serverstats_channel_deleted)
+        elif typ == "wf" and config.wfapi:
+            if str(ctx.guild.id) not in database or database[str(ctx.guild.id)]['warframe'] == None:
+                msg = await ctx.send(locale.wf_channel_not_set)
+            else:
+                database[str(ctx.guild.id)]['warframe'] = None
+                save_database()
+
+                msg = await ctx.send(locale.wf_channel_deleted)
         else:
             msg = await ctx.send(locale.wrong_first_param)
             await asyncio.sleep(2)
@@ -880,6 +998,9 @@ if config.lolapi:
         raise ValueError("Lol API Key not set.")
     lol_api = lol.LolAPI(TOKEN)
 
+if config.wfapi:
+    wf_api = wf.WfAPI()
+
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN is None:
     raise ValueError("Discord API Token not set.")
@@ -898,6 +1019,9 @@ async def on_ready():
         if not update_serverstats.is_running():
             update_serverstats.start()
 
+    if config.wfapi:
+        if not update_wf.is_running():
+            update_wf.start()
 def run_flask():
     gameserver_api.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
 
