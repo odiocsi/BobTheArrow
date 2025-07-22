@@ -104,7 +104,10 @@ class ChoosingView(View):
 
     def __create_callback(self, i):
         async def callback(interaction: discord.Interaction):
+            print("ayay")
             self.__resp.answer = i
+            print("Initial response object ID:", id(self.__resp))
+            self.__resp.event.set()
             await interaction.response.defer()
             try:
                 await self.__msg.delete()

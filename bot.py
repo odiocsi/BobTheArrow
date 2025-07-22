@@ -54,13 +54,19 @@ class Response():
     def __init__(self):
         self.answer = -1
         self.choosing = False
+        self.event = asyncio.Event()
 
-async def find_existing_message(channel, id):
+async def find_existing_message(channel, message_id, limit=100):
     try:
-        message = await channel.fetch_message(id)
-        return message
+        message_id = int(message_id)
     except:
         return None
+
+    async for message in channel.history(limit=limit):
+        if message.id == message_id:
+            return message
+    return None
+
 
 async def get_server_playlist(ctx):
     if ctx.guild.id not in playlists:
@@ -89,14 +95,14 @@ async def choose_song_msg(ctx, response, view, playlist, search_results):
     choose_view = views.ChoosingView(msg, response, search_results, ctx.guild)
     await choose_view.edit_message()
 
-    await choose_song_automatically(response)
-    while response.answer == -1:
-        await asyncio.sleep(0.1)
+    asyncio.create_task(choose_song_automatically(response))
+    await response.event.wait()
 
     playlist.add(search_results['entries'][response.answer]['title'],  search_results['entries'][response.answer]['url'])
 
     response.choosing = False
     response.answer = -1
+    response.event.clear()
 
     await delete_message(None, msg)
     if not ctx.voice_client.is_playing():
@@ -107,6 +113,7 @@ async def choose_song_automatically(response):
     if response.choosing:
         response.choosing = False
         response.answer = 0
+        response.event.set()
 
 def play_next(ctx, view, playlist):
     if playlist.isEmpty() and not playlist.getLoop() == "one" or not ctx.voice_client:
@@ -276,6 +283,7 @@ if config.musicplayer:
             return
 
         response = await get_server_response(ctx)
+        print("Initial response object ID:", id(response))
         if response.choosing:
             responses[ctx.guild.id].answer = 0
             responses[ctx.guild.id].choosing = False
@@ -317,6 +325,8 @@ if config.musicplayer:
             embed = discord.Embed(title=locale.musicplayer, color=0xFF0000)
             embed.add_field(name=locale.status, value=locale.loading, inline=False)
             await msg.edit(content=None, embed=embed)
+            database[str(ctx.guild.id)]["music_msg"] = msg.id
+            save_database()
         view = await get_server_view(ctx, msg)
         await msg.edit(view=view)
 
