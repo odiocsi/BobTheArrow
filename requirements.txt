@@ -5,3 +5,4 @@ pytz~=2025.1
 certifi~=2025.1.31
 yt-dlp~=2025.1.15
 flask~=3.0.0
+flask-limiter~=3.5.0
