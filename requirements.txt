@@ -4,3 +4,4 @@ requests~=2.32.3
 pytz~=2025.1
 certifi~=2025.1.31
 yt-dlp~=2025.1.15
+flask~=3.0.0
