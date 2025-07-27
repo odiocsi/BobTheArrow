@@ -80,9 +80,8 @@ Configuration settings are stored in the `config.py` file
     - `systemmessage`: Enables or disables the system message command.
     - `serverstats`: Enables or disables the Server statistics function.
 
-### .env and Database Setup
-1. rename the `database-empty.json` file to `database.json`
-2. rename the `example.env` file to `.env`
+### .env
+1. rename the `example.env` file to `.env`
 #### Bot Token Setup:
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications).
 2. Create a new application and navigate to the **Bot** section.
