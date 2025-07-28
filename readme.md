@@ -1,5 +1,5 @@
 # BobTheArrow
-## Desc
+## Description
 BobTheArrow is a fully modular multi purpose discord bot.
 ## Features
 - Music Player
