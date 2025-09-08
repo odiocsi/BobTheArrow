@@ -1,1 +1,42 @@
-{}
+{
+    "413323373888667650": {
+        "members": null,
+        "serverstats": null,
+        "serverstats_msg": null,
+        "music": null,
+        "music_msg": null,
+        "welcome": null,
+        "lol": null,
+        "rivals": null,
+        "warframe": 1396934790867062935,
+        "warframe_msg1": null,
+        "warframe_msg2": null,
+        "warframe_platform": "pc",
+        "prefix": ".",
+        "lang": "en",
+        "timezone": "CET",
+        "restricted_words": [],
+        "welcome_msg": "",
+        "welcome_rls": []
+    },
+    "419868895546048531": {
+        "members": null,
+        "serverstats": null,
+        "serverstats_msg": null,
+        "music": null,
+        "music_msg": null,
+        "welcome": null,
+        "lol": null,
+        "rivals": null,
+        "warframe": null,
+        "warframe_msg1": null,
+        "warframe_msg2": null,
+        "warframe_platform": "pc",
+        "prefix": ".",
+        "lang": "en",
+        "timezone": "CET",
+        "restricted_words": [],
+        "welcome_msg": "",
+        "welcome_rls": []
+    }
+}

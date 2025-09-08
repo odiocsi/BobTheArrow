@@ -283,7 +283,6 @@ if config.musicplayer:
             return
 
         response = await get_server_response(ctx)
-        print("Initial response object ID:", id(response))
         if response.choosing:
             responses[ctx.guild.id].answer = 0
             responses[ctx.guild.id].choosing = False
@@ -655,6 +654,7 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
                     embed.add_field(name=locale.status, value=locale.loading, inline=False)
                     await msg.edit(content=None, embed=embed)
                     database[str(ctx.guild.id)]["warframe_msg1"] = msg.id
+                    save_database()
 
                 cycle = wf_api.get_cycle(database[str(ctx.guild.id)]["warframe_platform"])
                 view = views.WfCycleView(msg, ctx.guild, cycle["cetus"], cycle["vallis"], cycle["cambion"])
@@ -669,6 +669,7 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
                     embed.add_field(name=locale.status, value=locale.loading, inline=False)
                     await msg.edit(content=None, embed=embed)
                     database[str(ctx.guild.id)]["warframe_msg2"] = msg.id
+                    save_database()
 
                 trader = wf_api.get_trader(database[str(ctx.guild.id)]["warframe_platform"])
                 view = views.WfBarooView(msg, ctx.guild, trader["status"], trader["arrives"], trader["departs"])
@@ -1041,5 +1042,5 @@ if __name__ == "__main__":
         flask_thread.daemon = True
         flask_thread.start()
 
-    signal.signal(signal.SIGINT, lambda signal, frame: on_shutdown_signal())
     bot.run(TOKEN)
+    signal.signal(signal.SIGINT, lambda signal, frame: on_shutdown_signal())
