@@ -469,7 +469,7 @@ class WfCycleView(View):
 
         await self.__msg.edit(content=None, embed=embed, view=self)
 
-class WfBarooView(View):
+class WfBaroView(View):
     def __init__(self, msg, guild, status, arrives, departs):
         super().__init__(timeout=None)
         self.__msg = msg
@@ -485,6 +485,6 @@ class WfBarooView(View):
 
         embed.set_thumbnail(url=config.baro_img)
 
-        embed.add_field(name=(f"{locale.baro_active}" if self.__status else f"{locale.baro_active}"), value=(f"{self.__departs}" if self.__status else f"{self.__arrives}"), inline=False)
+        embed.add_field(name=(f"{locale.baro_active}" if self.__status else f"{locale.baro_inactive}"), value=(f"{self.__departs}" if self.__status else f"{self.__arrives}"), inline=False)
 
         await self.__msg.edit(content=None, embed=embed, view=self)

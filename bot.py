@@ -191,7 +191,7 @@ async def update_wf():
                 database[str(channel.guild.id)]["warframe_msg2"] = msg.id
 
             trader = wf_api.get_trader(database[str(channel.guild.id)]["warframe_platform"])
-            view = views.WfBarooView(msg, guild, trader["status"], trader["arrives"], trader["departs"])
+            view = views.WfBaroView(msg, guild, trader["status"], trader["arrives"], trader["departs"])
             await view.edit_message()
             await msg.edit(view=view)
 
@@ -672,7 +672,7 @@ if config.musicplayer or config.rivalsapi or config.welcome or config.lolapi:
                     save_database()
 
                 trader = wf_api.get_trader(database[str(ctx.guild.id)]["warframe_platform"])
-                view = views.WfBarooView(msg, ctx.guild, trader["status"], trader["arrives"], trader["departs"])
+                view = views.WfBaroView(msg, ctx.guild, trader["status"], trader["arrives"], trader["departs"])
                 await view.edit_message()
                 await msg.edit(view=view)
 
@@ -1042,5 +1042,5 @@ if __name__ == "__main__":
         flask_thread.daemon = True
         flask_thread.start()
 
-    bot.run(TOKEN)
     signal.signal(signal.SIGINT, lambda signal, frame: on_shutdown_signal())
+    bot.run(TOKEN)
