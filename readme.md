@@ -3,7 +3,7 @@
 BobTheArrow is a fully modular multi purpose discord bot.
 ## Features
 - Music Player
-- Game statistics retrieval (Marvel Rivals, League of Legends)
+- Game statistics retrieval (Marvel Rivals, League of Legends, Warframe)
 - Server moderation tools
 - Command based configuration for each server
 
