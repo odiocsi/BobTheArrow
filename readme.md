@@ -1,5 +1,5 @@
 # BobTheArrow
-![BobTheArrow](https://img.favpng.com/5/2/5/minecraft-pocket-edition-bow-and-arrow-fire-arrow-png-favpng-Za76UYXkKEh56Fi7wsHw2FxdK.jpg)
+![BobTheArrow](https://i.imgur.com/EUr54Ug.png)
 ## Description
 BobTheArrow is a fully modular multi purpose discord bot.
 ## Features
