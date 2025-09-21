@@ -1,4 +1,5 @@
 # BobTheArrow
+![](https://raw.githubusercontent.com/Codecademy/docs/main/media/codey.jpg)
 ## Description
 BobTheArrow is a fully modular multi purpose discord bot.
 ## Features
