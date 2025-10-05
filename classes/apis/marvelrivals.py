@@ -25,11 +25,14 @@ class RivalsAPI:
                     if data['isPrivate']:
                         return False
 
-                    sorted_heroes = sorted(data["heroes_ranked"], key=lambda x: x["matches"], reverse=True)
-
                     heroes = []
-                    for h in sorted_heroes[:3]:
-                        heroes.append(self.__extract_hero_data(h))
+                    try:
+                        sorted_heroes = sorted(data["heroes_ranked"], key=lambda x: x["matches"], reverse=True)
+
+                        for h in sorted_heroes[:3]:
+                            heroes.append(self.__extract_hero_data(h))
+                    except:
+                        heroes.append("N/A")
 
                     rank = data['player']['rank']['rank']
                     if rank == "Invalid level":
