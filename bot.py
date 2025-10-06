@@ -12,7 +12,7 @@ from discord.ext import tasks, commands
 import config
 from locales import languages
 from classes.apis import marvelrivals
-from classes.apis import lol
+from classes.apis import leagueoflegends
 from classes.apis import warframe as wf
 from classes import music
 from classes import views
