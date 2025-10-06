@@ -1007,7 +1007,7 @@ if config.lolapi:
     TOKEN = os.getenv("LOL_API_KEY")
     if TOKEN is None:
         raise ValueError("Lol API Key not set.")
-    lol_api = lol.LolAPI(TOKEN)
+    lol_api = leagueoflegends.LolAPI(TOKEN)
 
 if config.wfapi:
     wf_api = wf.WfAPI()
